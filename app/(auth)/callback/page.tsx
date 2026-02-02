@@ -1,35 +1,85 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/db/client';
 
 export default function CallbackPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const isProcessing = useRef(false);
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Prevent double execution in React Strict Mode
+      if (isProcessing.current) return;
+      isProcessing.current = true;
+
       try {
         const supabase = createBrowserClient();
         
-        // Get the code from the URL
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        // First, check if user is already authenticated (handles Strict Mode re-runs)
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (existingSession) {
+          router.push('/');
+          router.refresh();
+          return;
+        }
+        
         const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
         
-        const code = hashParams.get('access_token') || searchParams.get('code');
+        // Check for error in URL (e.g., expired or already used link)
+        const errorParam = searchParams.get('error') || hashParams.get('error');
+        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
         
-        if (!code) {
-          throw new Error('No authentication code found');
+        if (errorParam) {
+          throw new Error(errorDescription || errorParam);
+        }
+        
+        // Check if we have a code in the URL (for PKCE flow)
+        const code = searchParams.get('code');
+        
+        if (code) {
+          // Exchange the code for a session
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (exchangeError) {
+            // If exchange fails, check if we already have a session (code was consumed by first render)
+            const { data: { session: retrySession } } = await supabase.auth.getSession();
+            if (retrySession) {
+              router.push('/');
+              router.refresh();
+              return;
+            }
+            throw exchangeError;
+          }
+        } else {
+          // Fallback: check for hash parameters (older flow)
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            
+            if (sessionError) throw sessionError;
+          } else {
+            throw new Error('No authentication code or tokens found in URL');
+          }
         }
 
-        // Exchange the code for a session
-        const { error: authError } = await supabase.auth.getSession();
+        // Verify the session was established
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (authError) throw authError;
+        if (sessionError) throw sessionError;
+        if (!session) throw new Error('Failed to establish session');
 
-        // Redirect to home or builder
+        // Redirect to home
         router.push('/');
+        router.refresh();
       } catch (err) {
         console.error('Auth callback error:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
