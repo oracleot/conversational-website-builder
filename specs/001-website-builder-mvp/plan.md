@@ -7,12 +7,12 @@
 
 ## Summary
 
-Build a hybrid SaaS platform where small business owners chat their way through website creation, see live previews as they go, and get human-assisted launch. The system uses pre-built, industry-specific component variants (5 per section type) with AI orchestrating selection and content injection. MVP supports 2 industries (Service + Local businesses) with extensible architecture. Technical approach uses GPT-4o for conversation orchestration, GPT-4o-mini for content extraction, Supabase for persistence, and generates deployable Next.js projects on export.
+Build a hybrid SaaS platform where small business owners chat their way through website creation, see live previews as they go, and get human-assisted launch. The system uses pre-built, industry-specific component variants (5 per section type) with AI orchestrating selection and content injection. MVP supports 2 industries (Service + Local businesses) with extensible architecture. Technical approach uses OpenRouter for model access (GPT-4o/Claude/etc. for conversation orchestration, GPT-4o-mini for content extraction), Supabase for persistence, and generates deployable Next.js projects on export.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x with Next.js 15 App Router (strict mode enabled)  
-**Primary Dependencies**: React 19, Tailwind CSS, Framer Motion, Zod, Vercel AI SDK (`ai`), OpenAI SDK, @supabase/supabase-js, Resend  
+**Primary Dependencies**: React 19, Tailwind CSS, Framer Motion, Zod, Vercel AI SDK (`ai`), OpenAI SDK (via OpenRouter), @supabase/supabase-js, Resend  
 **Storage**: Supabase (PostgreSQL + Realtime + Auth)  
 **Testing**: Vitest for unit tests, Playwright for E2E, React Testing Library for components  
 **Target Platform**: Modern web browsers (Chrome, Safari, Firefox, Edge), Vercel deployment  
@@ -73,7 +73,7 @@ Build a hybrid SaaS platform where small business owners chat their way through 
 | <15 min conversation | ✅ Planned | Optimized flow design |
 | <3s preview render | ✅ Planned | Client-side rendering |
 | <45s export | ✅ Planned | Template assembly approach |
-| <$2 AI cost per site | ✅ Planned | GPT-4o-mini for extraction |
+| <$2 AI cost per site | ✅ Planned | GPT-4o-mini via OpenRouter for extraction |
 | <100ms DB queries | ✅ Planned | Indexed queries, minimal data |
 | Lazy loading | ✅ Planned | Viewport + 1 ahead strategy |
 
@@ -84,7 +84,7 @@ Build a hybrid SaaS platform where small business owners chat their way through 
 | Next.js 15 App Router + TypeScript strict | ✅ |
 | Tailwind CSS + Framer Motion | ✅ |
 | Supabase + Zod schemas | ✅ |
-| GPT-4o orchestration + GPT-4o-mini extraction | ✅ |
+| OpenRouter (GPT-4o/Claude/etc.) orchestration + extraction | ✅ |
 | Vercel deployment | ✅ |
 | Resend for emails | ✅ |
 | Component naming convention | ✅ |
@@ -124,8 +124,11 @@ app/
 │   ├── chat/route.ts            # Streaming chat endpoint
 │   ├── conversation/route.ts    # Conversation CRUD
 │   ├── site/route.ts            # Site config CRUD
-│   ├── export/route.ts          # Project export
-│   └── launch/route.ts          # Launch request handling
+│   ├── export/route.ts          # Project export (payment gated)
+│   ├── launch/route.ts          # Launch request handling (payment gated)
+│   └── checkout/
+│       ├── route.ts             # Payment checkout flow
+│       └── callback/route.ts    # Payment success callback
 ├── globals.css
 ├── layout.tsx
 └── page.tsx                     # Landing/home page
@@ -163,7 +166,9 @@ components/
 │   └── variant-carousel.tsx     # Alternative variants display
 ├── builder/
 │   ├── builder-layout.tsx       # Split-screen container
-│   └── launch-modal.tsx         # Ready to Launch form
+│   ├── launch-modal.tsx         # Ready to Launch form
+│   ├── export-modal.tsx         # Export progress and download UI
+│   └── upgrade-modal.tsx        # Payment gate for free users
 └── ui/
     └── [shadcn components]      # Button, Input, Dialog, etc.
 
@@ -189,8 +194,18 @@ lib/
 │   ├── client.ts                # Supabase client
 │   ├── queries.ts               # Database queries
 │   └── types.ts                 # Database types
+├── ai/
+│   └── client.ts                # OpenRouter-compatible AI client
 ├── email/
 │   └── templates.ts             # Email templates for Resend
+├── payments/
+│   └── client.ts                # Stripe/LemonSqueezy payment client
+├── images/
+│   └── placeholder.ts           # Unsplash/Picsum placeholder service
+├── stores/
+│   ├── conversation-store.ts    # Conversation state
+│   ├── site-store.ts            # Site configuration state
+│   └── session-store.ts         # Anonymous/auth session management
 └── utils.ts
 
 tests/
@@ -213,3 +228,15 @@ tests/
 ## Complexity Tracking
 
 > No constitution violations identified. All requirements align with defined principles.
+
+### Component Count Breakdown
+
+Total 70 unique section components:
+
+| Category | Count | Details |
+|----------|-------|---------|
+| Service Industry | 35 | 5 variants × 7 sections (hero, services, about, process, testimonials, portfolio, contact) |
+| Local Industry | 20 | 5 variants × 4 local-only sections (menu, location, gallery, hero) |
+| Shared | 15 | 5 variants × 3 shared sections (about, testimonials, contact) |
+
+**Note**: About, testimonials, and contact sections are shared across industries and counted once.

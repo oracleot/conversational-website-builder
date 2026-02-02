@@ -12,15 +12,21 @@ This document consolidates research findings for all technology choices, integra
 
 ## 1. AI Orchestration Strategy
 
-### Decision: Dual-Model Approach (GPT-4o + GPT-4o-mini)
+### Decision: Dual-Model Approach via OpenRouter (GPT-4o + GPT-4o-mini)
 
-**Rationale**: Optimize for both quality and cost by using the appropriate model for each task.
+**Rationale**: Optimize for both quality and cost by using the appropriate model for each task. OpenRouter provides model-agnostic access enabling easy provider switching.
 
 | Task | Model | Reasoning |
 |------|-------|-----------|
-| Conversation orchestration | GPT-4o | Requires nuanced understanding, contextual awareness, and natural dialogue |
+| Conversation orchestration | GPT-4o (or Claude 3.5 Sonnet) | Requires nuanced understanding, contextual awareness, and natural dialogue |
 | Content extraction | GPT-4o-mini | Structured output extraction is simpler, 10x cost reduction |
 | Variant selection | GPT-4o-mini | Pattern matching against personality matrix, low complexity |
+
+**OpenRouter Benefits**:
+- Single API key for multiple providers (OpenAI, Anthropic, Google, etc.)
+- Easy model switching without code changes
+- Fallback routing if primary model is unavailable
+- Usage tracking across all models
 
 **Cost Analysis (per site build)**:
 - Orchestration (~15 conversational turns): ~$0.50
@@ -30,7 +36,7 @@ This document consolidates research findings for all technology choices, integra
 
 **Alternatives Considered**:
 - **Single GPT-4o for all**: Higher quality but ~$3-4 per site, exceeds budget
-- **Claude 3.5 Sonnet**: Comparable quality, but OpenAI SDK more mature for structured outputs
+- **Direct OpenAI API**: Works but locks into single provider; OpenRouter preferred for flexibility
 - **Fine-tuned model**: Overkill for MVP, would require significant training data
 
 ---
@@ -84,10 +90,18 @@ interface ConversationState {
 4. Zod validates output, rejects invalid responses
 5. If validation fails, retry with clarification request
 
-**Zod Integration with OpenAI**:
+**OpenRouter + Zod Integration**:
 ```typescript
-const extractedContent = await openai.chat.completions.create({
-  model: 'gpt-4o-mini',
+import OpenAI from 'openai';
+
+// OpenRouter-compatible client
+const openrouter = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1',
+});
+
+const extractedContent = await openrouter.chat.completions.create({
+  model: 'openai/gpt-4o-mini', // OpenRouter model format
   response_format: { type: 'json_object' },
   messages: [
     { role: 'system', content: sectionExtractionPrompt },
@@ -102,7 +116,7 @@ const validated = SectionSchema.parse(JSON.parse(extractedContent));
 **Alternatives Considered**:
 - **Manual form input**: Defeats conversational UX goal
 - **Single generic extractor**: Lower accuracy, needs post-processing
-- **LangChain structured output**: Additional dependency, OpenAI native sufficient
+- **LangChain structured output**: Additional dependency, OpenRouter + OpenAI SDK sufficient
 
 ---
 
@@ -331,7 +345,7 @@ export const LaunchConfirmation = ({ businessName, previewUrl }) => (
 
 **AI Output Testing**:
 - Fixture library of sample user inputs and expected extractions
-- Mock OpenAI responses for deterministic testing
+- Mock AI responses for deterministic testing
 - Accuracy measured against fixture set
 
 **Performance Testing**:
@@ -366,7 +380,8 @@ export const LaunchConfirmation = ({ businessName, previewUrl }) => (
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-OPENAI_API_KEY=
+OPENROUTER_API_KEY=
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 RESEND_API_KEY=
 ```
 
@@ -416,7 +431,7 @@ RESEND_API_KEY=
 | zod | 3.x | Schema validation |
 | @supabase/supabase-js | 2.x | Database client |
 | ai | 3.x | Vercel AI SDK |
-| openai | 4.x | OpenAI client |
+| openai | 4.x | OpenAI SDK (OpenRouter-compatible) |
 | resend | 2.x | Email |
 | zustand | 5.x | State management |
 

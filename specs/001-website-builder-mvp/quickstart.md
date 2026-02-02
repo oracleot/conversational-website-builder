@@ -7,7 +7,7 @@
 
 - Node.js 20+ (LTS recommended)
 - pnpm 9+ (`npm install -g pnpm`)
-- OpenAI API key with GPT-4o and GPT-4o-mini access
+- OpenRouter API key (provides access to GPT-4o, Claude, and other models)
 - Supabase account (free tier works for development)
 - Resend account for email (free tier: 100 emails/day)
 
@@ -33,8 +33,9 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# OpenAI
-OPENAI_API_KEY=sk-your-openai-api-key
+# OpenRouter (model-agnostic access)
+OPENROUTER_API_KEY=sk-or-your-openrouter-api-key
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 
 # Resend (Email)
 RESEND_API_KEY=re_your-resend-api-key
@@ -259,7 +260,7 @@ pnpm test:coverage
 ### Contract Tests (`tests/contract/`)
 
 - AI structured output parsing
-- Mock OpenAI responses for determinism
+- Mock AI responses for determinism
 
 ### E2E Tests (`tests/e2e/`)
 
@@ -272,14 +273,14 @@ pnpm test:coverage
 
 ## 7. Common Tasks
 
-### Generate OpenAI Structured Outputs
+### Generate AI Structured Outputs
 
 ```typescript
-import { openai } from '@/lib/openai';
+import { openai } from '@/lib/ai'; // OpenRouter-compatible client
 import { HeroContentSchema } from '@/lib/schemas';
 
 const response = await openai.chat.completions.create({
-  model: 'gpt-4o-mini',
+  model: 'openai/gpt-4o-mini', // OpenRouter model format
   response_format: { type: 'json_object' },
   messages: [
     { role: 'system', content: HERO_EXTRACTION_PROMPT },
@@ -294,10 +295,16 @@ const content = HeroContentSchema.parse(JSON.parse(response.choices[0].message.c
 
 ```typescript
 import { streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
+
+// OpenRouter-compatible provider
+const openrouter = createOpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1',
+});
 
 const result = await streamText({
-  model: openai('gpt-4o'),
+  model: openrouter('openai/gpt-4o'), // Can switch to 'anthropic/claude-3.5-sonnet' etc.
   messages: conversationMessages,
   system: ORCHESTRATOR_SYSTEM_PROMPT
 });

@@ -14,8 +14,9 @@ paths:
       operationId: streamChat
       summary: Stream a chat message response
       description: |
-        Sends a user message and streams an AI response. Uses GPT-4o for orchestration
-        and GPT-4o-mini for content extraction when appropriate.
+        Sends a user message and streams an AI response. Uses OpenRouter for model access
+        (GPT-4o/Claude for orchestration, GPT-4o-mini for content extraction). Models can be
+        switched via configuration without code changes.
       requestBody:
         required: true
         content:
@@ -123,7 +124,7 @@ paths:
       operationId: extractContent
       summary: Extract structured content from user message
       description: |
-        Uses GPT-4o-mini to extract structured section content from natural language.
+        Uses AI via OpenRouter (GPT-4o-mini by default) to extract structured section content from natural language.
         Returns validated content matching the section's Zod schema.
       parameters:
         - $ref: '#/components/parameters/ConversationId'

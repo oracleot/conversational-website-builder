@@ -152,7 +152,7 @@ A local business owner (restaurant, salon, retail) can complete the same guided 
 
 **Component Library:**
 
-- **FR-015**: System MUST provide 5 distinct design variants for each of 7 section types per industry (hero, services, about, process, testimonials, portfolio, contact for service; hero, menu, location, gallery, about, testimonials, contact for local)
+- **FR-015**: System MUST provide 5 distinct design variants for each section type: 7 for service industry (hero, services, about, process, testimonials, portfolio, contact) and 7 for local industry (hero, menu, location, gallery, about, testimonials, contact), with about/testimonials/contact shared across industries - totaling 70 unique components (35 service + 20 local-only + 15 shared)
 - **FR-016**: All section components MUST accept content via standardized prop interfaces
 - **FR-017**: Components MUST render with placeholder images when user hasn't provided custom images
 

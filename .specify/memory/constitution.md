@@ -76,7 +76,7 @@ All operations MUST meet defined latency and cost budgets to ensure scalability 
 **Framework:** Next.js 15 App Router with TypeScript strict mode enabled
 **Styling:** Tailwind CSS + Framer Motion; CSS variables for theme customization
 **Database:** Supabase (Postgres + Realtime); all schemas defined in `lib/schemas/` with Zod validation
-**AI Models:** GPT-4o for orchestration, GPT-4o-mini for extraction; structured JSON outputs required
+**AI Models:** OpenRouter for model access (GPT-4o, Claude, etc. for orchestration; GPT-4o-mini for extraction); structured JSON outputs required; model-agnostic architecture enables switching providers without code changes
 **Deployment:** Vercel for platform; generated user sites MUST deploy to Vercel successfully
 **Email:** Resend for transactional emails; all notifications MUST include required context
 
