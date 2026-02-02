@@ -112,7 +112,7 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
           'max-w-[85%] rounded-2xl px-4 py-3',
           isUser
             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
-            : 'bg-gray-100 text-gray-900',
+            : 'bg-gray-100 text-black',
           isStreaming && 'min-h-[60px]'
         )}
       >
@@ -129,7 +129,7 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
         {/* Message content */}
         <div className={cn(
           'text-sm leading-relaxed whitespace-pre-wrap break-words',
-          isUser ? 'text-white' : 'text-gray-800'
+          isUser ? 'text-white' : 'text-black'
         )}>
           {message.content}
           {isStreaming && (

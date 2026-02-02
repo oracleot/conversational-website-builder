@@ -41,6 +41,11 @@ export function ChatInput({
     }
   }, [value, disabled, isLoading, onSend]);
 
+  const handleSuggest = useCallback(() => {
+    if (disabled || isLoading) return;
+    onSend('Suggest an answer');
+  }, [disabled, isLoading, onSend]);
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Submit on Enter (without Shift)
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -59,48 +64,74 @@ export function ChatInput({
   };
 
   return (
-    <div className={cn('flex gap-3 items-end', className)}>
-      <div className="relative flex-1">
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+    <div className={cn('flex flex-col gap-2', className)}>
+      {/* Suggest button row */}
+      <div className="flex justify-start">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleSuggest}
           disabled={disabled || isLoading}
           className={cn(
-            'min-h-[52px] max-h-[200px] resize-none pr-4',
-            'rounded-2xl border-2 border-gray-200 focus:border-blue-500',
-            'transition-colors duration-200',
-            'placeholder:text-gray-400',
-            disabled && 'opacity-50 cursor-not-allowed'
+            'h-8 px-3 rounded-full text-xs border-0',
+            'bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-400 text-white font-medium',
+            'hover:from-amber-500 hover:via-orange-500 hover:to-yellow-500',
+            'shadow-sm hover:shadow-md',
+            'transition-all duration-200'
           )}
-          rows={1}
-        />
+        >
+          <span className="flex items-center gap-1.5">
+            <LightbulbIcon className="w-3.5 h-3.5" />
+            <span>Suggest an answer</span>
+          </span>
+        </Button>
       </div>
-      <Button
-        onClick={handleSubmit}
-        disabled={!value.trim() || disabled || isLoading}
-        className={cn(
-          'h-[52px] px-6 rounded-2xl',
-          'bg-gradient-to-r from-blue-600 to-indigo-600',
-          'hover:from-blue-700 hover:to-indigo-700',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          'transition-all duration-200'
-        )}
-      >
-        {isLoading ? (
-          <span className="flex items-center gap-2">
-            <LoadingDots />
-            <span className="sr-only">Sending...</span>
-          </span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <SendIcon className="w-5 h-5" />
-            <span className="hidden sm:inline">Send</span>
-          </span>
-        )}
-      </Button>
+      
+      {/* Input row */}
+      <div className="flex gap-3 items-end">
+        <div className="relative flex-1">
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled || isLoading}
+            className={cn(
+              'min-h-[52px] max-h-[200px] resize-none pr-4',
+              'rounded-2xl border-2 border-gray-200 focus:border-blue-500',
+              'transition-colors duration-200',
+              'placeholder:text-gray-400 text-gray-900',
+              disabled && 'opacity-50 cursor-not-allowed'
+            )}
+            rows={1}
+          />
+        </div>
+        <Button
+          onClick={handleSubmit}
+          disabled={!value.trim() || disabled || isLoading}
+          className={cn(
+            'h-[52px] px-6 rounded-2xl',
+            'bg-gradient-to-r from-blue-600 to-indigo-600',
+            'hover:from-blue-700 hover:to-indigo-700',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'transition-all duration-200'
+          )}
+        >
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <LoadingDots />
+              <span className="sr-only">Sending...</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <SendIcon className="w-5 h-5" />
+              <span className="hidden sm:inline">Send</span>
+            </span>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -125,9 +156,27 @@ function SendIcon({ className }: { className?: string }) {
 function LoadingDots() {
   return (
     <span className="flex gap-1">
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+      <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
     </span>
+  );
+}
+
+function LightbulbIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+      <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+    </svg>
   );
 }

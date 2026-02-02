@@ -23,6 +23,52 @@ interface ChatInterfaceProps {
   className?: string;
 }
 
+// Initial welcome message based on current step
+const getInitialWelcomeMessage = (step: ConversationStep): Message => {
+  const welcomeMessages: Partial<Record<ConversationStep, string>> = {
+    industry_selection: `Welcome! I'm excited to help you build your professional website today. 🎉
+
+To get started, I need to understand your business better. What type of business are you building a website for?
+
+**1. Service Business** - Consulting, agencies, professional services, B2B
+**2. Local Business** - Restaurants, salons, retail shops, local services
+
+Just tell me about your business and I'll guide you through creating each section!
+
+💡 *Not sure what to say? Click the "Suggest an answer" button for ideas!*`,
+    business_profile: `Great! Now let's capture your business identity.
+
+I'll need a few key details:
+• **Business name** - What's your company called?
+• **Tagline** - A short, catchy phrase that captures what you do
+• **Description** - What does your business do and who do you serve?
+• **Brand personality** - 2-3 words that describe your brand (e.g., professional, friendly, modern)
+• **Contact email** - Where should customers reach you?
+
+Let's start with your business name!
+
+💡 *Stuck? Hit "Suggest an answer" for an example you can customize!*`,
+    hero: `Now let's create your hero section - this is the first thing visitors will see!
+
+I need:
+• **Headline** - Your main value proposition (what makes you special?)
+• **Subheadline** - A supporting message that expands on the headline
+• **Call-to-action** - What should visitors do? (e.g., "Get Started", "Book Consultation")
+
+What's the main message you want visitors to see first?
+
+💡 *Need inspiration? The "Suggest an answer" button can help!*`,
+  };
+
+  return {
+    id: 'welcome-message',
+    role: 'assistant',
+    content: welcomeMessages[step] || `Let's work on your ${step.replace('_', ' ')} section. Tell me what you'd like to include!\n\n💡 *Need help? Click "Suggest an answer" for ideas!*`,
+    timestamp: new Date().toISOString(),
+    metadata: { step },
+  };
+};
+
 export function ChatInterface({
   conversationId,
   initialMessages = [],
@@ -32,7 +78,11 @@ export function ChatInterface({
   onExtraction,
   className,
 }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  // Add welcome message if no messages exist
+  const messagesWithWelcome = initialMessages.length === 0 
+    ? [getInitialWelcomeMessage(currentStep)]
+    : initialMessages;
+  const [messages, setMessages] = useState<Message[]>(messagesWithWelcome);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
