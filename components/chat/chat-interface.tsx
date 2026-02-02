@@ -36,6 +36,25 @@ export function ChatInterface({
   const [streamingMessage, setStreamingMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleExtraction = useCallback(async (extractionType: string) => {
+    try {
+      const response = await fetch(`/api/conversation/${conversationId}/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sectionType: extractionType }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.content) {
+          onExtraction?.(extractionType, data.content);
+        }
+      }
+    } catch (error) {
+      console.error('Extraction error:', error);
+    }
+  }, [conversationId, onExtraction]);
+
   const sendMessage = useCallback(async (content: string) => {
     if (isLoading) return;
 
@@ -154,26 +173,7 @@ export function ChatInterface({
       setIsLoading(false);
       setStreamingMessage('');
     }
-  }, [conversationId, currentStep, isLoading, onStepChange]);
-
-  const handleExtraction = async (extractionType: string) => {
-    try {
-      const response = await fetch(`/api/conversation/${conversationId}/extract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sectionType: extractionType }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.content) {
-          onExtraction?.(extractionType, data.content);
-        }
-      }
-    } catch (error) {
-      console.error('Extraction error:', error);
-    }
-  };
+  }, [conversationId, currentStep, isLoading, onStepChange, handleExtraction]);
 
   return (
     <div className={cn('flex flex-col h-full bg-white', className)}>

@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { ChatCompletion } from 'openai/resources/chat/completions';
 
 // Mock the openai module
 vi.mock('@/lib/ai/client', () => ({
@@ -95,7 +96,7 @@ describe('ConversationOrchestrator', () => {
         id: 'test-123',
         currentStep: 'industry_selection',
         messages: [
-          { id: 'msg-1', role: 'assistant', content: 'Hello! What type of business do you have?' }
+          { id: 'msg-1', role: 'assistant', content: 'Hello! What type of business do you have?', timestamp: new Date().toISOString() }
         ],
       };
 
@@ -106,10 +107,11 @@ describe('ConversationOrchestrator', () => {
         model: 'gpt-4o-mini',
         choices: [{
           index: 0,
-          message: { role: 'assistant', content: 'Great! Tell me more about your consulting business.' },
+          message: { role: 'assistant', content: 'Great! Tell me more about your consulting business.', refusal: null },
+          logprobs: null,
           finish_reason: 'stop'
         }]
-      } as any);
+      } as ChatCompletion);
 
       const orchestrator = new ConversationOrchestrator(context);
       const result = await orchestrator.generateResponse();

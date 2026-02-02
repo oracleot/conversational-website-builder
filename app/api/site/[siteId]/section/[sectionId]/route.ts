@@ -11,7 +11,6 @@ import { getSiteDraft, saveSiteDraft } from '@/lib/db/queries';
 import { SectionType } from '@/lib/db/types';
 
 // Schema for updating a section
-const borderRadiusOptions = ['none', 'sm', 'md', 'lg', 'full'] as const;
 const UpdateSectionSchema = z.object({
   order: z.number().int().min(0).optional(),
   variant: z.number().int().min(1).max(5).optional(),

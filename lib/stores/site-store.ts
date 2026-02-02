@@ -122,7 +122,7 @@ const initialState = {
 
 export const useSiteStore = create<SiteState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       ...initialState,
 
       initializeSite: (data) => set({

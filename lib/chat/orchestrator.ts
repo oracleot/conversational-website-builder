@@ -296,7 +296,7 @@ ${stepPrompt}`;
   /**
    * Check if business profile information is complete enough to proceed
    */
-  private async checkBusinessProfileComplete(userMessage: string): Promise<boolean> {
+  private async checkBusinessProfileComplete(_userMessage: string): Promise<boolean> {
     // Check if we have accumulated enough messages about the business
     const profileMessages = this.context.messages.filter(m => 
       m.metadata?.step === 'business_profile'

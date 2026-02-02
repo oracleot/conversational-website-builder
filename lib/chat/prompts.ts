@@ -39,7 +39,7 @@ Current conversation context will be provided. Your job is to guide them to the 
 /**
  * Get the orchestration prompt for a specific conversation step
  */
-export function getStepPrompt(step: ConversationStep, industry?: IndustryType): string {
+export function getStepPrompt(step: ConversationStep, _industry?: IndustryType): string {
   const prompts: Record<ConversationStep, string> = {
     industry_selection: `The user is just starting. Ask them what type of business they're building a website for. 
     

@@ -87,8 +87,8 @@ export function ComponentLoader<T extends SectionType>({
     }
 
     const LazyComp = React.lazy(async () => {
-      const module = await loader();
-      const Component = module.default || Object.values(module)[0];
+      const importedModule = await loader();
+      const Component = importedModule.default || Object.values(importedModule)[0];
       componentCache.set(cacheKey, Component as React.ComponentType<unknown>);
       return { default: Component as React.ComponentType<unknown> };
     });
@@ -137,8 +137,8 @@ export async function preloadSectionComponent(
   const loader = SECTION_COMPONENTS[sectionType]?.[variant];
   if (loader) {
     try {
-      const module = await loader();
-      const Component = module.default || Object.values(module)[0];
+      const importedModule = await loader();
+      const Component = importedModule.default || Object.values(importedModule)[0];
       componentCache.set(cacheKey, Component as React.ComponentType<unknown>);
     } catch (error) {
       console.error(`Failed to preload ${sectionType} variant ${variant}:`, error);

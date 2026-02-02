@@ -49,7 +49,6 @@ interface SitePreviewProps {
   sectionOrder?: SectionType[];
   variantOverrides?: Partial<Record<SectionType, VariantNumber>>;
   className?: string;
-  onSectionView?: (sectionId: SectionType) => void;
 }
 
 /**
@@ -62,7 +61,6 @@ export function SitePreview({
   sectionOrder = DEFAULT_SECTION_ORDER,
   variantOverrides = {},
   className,
-  onSectionView,
 }: SitePreviewProps) {
   // Determine variant based on personality
   const defaultVariant = (PERSONALITY_VARIANT_MAP[personality] || 1) as VariantNumber;

@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { publishSite, getSiteBySlug } from '@/lib/db/queries';
-import type { SiteContent } from '@/components/sections/preview/site-preview';
 
 export interface PublishSiteRequest {
   siteId: string;
