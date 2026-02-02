@@ -14,12 +14,12 @@
 
 **Purpose**: Project initialization, dependencies, and tooling configuration
 
-- [ ] T001 Install core dependencies: ai, openai (OpenRouter-compatible), @supabase/supabase-js, zod, zustand, framer-motion, resend
-- [ ] T002 [P] Configure TypeScript strict mode in tsconfig.json
-- [ ] T003 [P] Add shadcn/ui components: Button, Input, Dialog, Card, Textarea, ScrollArea, Skeleton
-- [ ] T004 [P] Configure Vitest for unit testing in vitest.config.ts
-- [ ] T005 [P] Configure Playwright for E2E testing in playwright.config.ts
-- [ ] T006 Create environment variables template in .env.example\n- [ ] T006a Create OpenRouter-compatible AI client wrapper in lib/ai/client.ts
+- [X] T001 Install core dependencies: ai, openai (OpenRouter-compatible), @supabase/supabase-js, zod, zustand, framer-motion, resend
+- [X] T002 [P] Configure TypeScript strict mode in tsconfig.json
+- [X] T003 [P] Add shadcn/ui components: Button, Input, Dialog, Card, Textarea, ScrollArea, Skeleton
+- [X] T004 [P] Configure Vitest for unit testing in vitest.config.ts
+- [X] T005 [P] Configure Playwright for E2E testing in playwright.config.ts
+- [X] T006 Create environment variables template in .env.example\n- [X] T006a Create OpenRouter-compatible AI client wrapper in lib/ai/client.ts
 
 ---
 
@@ -31,41 +31,41 @@
 
 ### Database & Auth
 
-- [ ] T007 Create Supabase client wrapper in lib/db/client.ts
-- [ ] T008 [P] Create database types from schema in lib/db/types.ts
-- [ ] T009 Run database migrations for users, conversations, sites, component_usage tables
-- [ ] T010 [P] Implement magic link auth flow in app/(auth)/login/page.tsx
-- [ ] T011 [P] Implement auth callback handler in app/(auth)/callback/page.tsx
+- [X] T007 Create Supabase client wrapper in lib/db/client.ts
+- [X] T008 [P] Create database types from schema in lib/db/types.ts
+- [X] T009 Run database migrations for users, conversations, sites, component_usage tables
+- [X] T010 [P] Implement magic link auth flow in app/(auth)/login/page.tsx
+- [X] T011 [P] Implement auth callback handler in app/(auth)/callback/page.tsx
 
 ### Zod Schemas (All User Stories Depend On)
 
-- [ ] T012 [P] Create BusinessProfile schema in lib/schemas/business-profile.ts
-- [ ] T013 [P] Create HeroContent schema in lib/schemas/section-content.ts
-- [ ] T014 [P] Create ServicesContent schema in lib/schemas/section-content.ts
-- [ ] T015 [P] Create AboutContent schema in lib/schemas/section-content.ts
-- [ ] T016 [P] Create TestimonialsContent schema in lib/schemas/section-content.ts
-- [ ] T017 [P] Create ContactContent schema in lib/schemas/section-content.ts
-- [ ] T018 [P] Create ProcessContent schema in lib/schemas/section-content.ts
-- [ ] T019 [P] Create PortfolioContent schema in lib/schemas/section-content.ts
-- [ ] T020 [P] Create MenuContent schema in lib/schemas/section-content.ts
-- [ ] T021 [P] Create LocationContent schema in lib/schemas/section-content.ts
-- [ ] T022 [P] Create GalleryContent schema in lib/schemas/section-content.ts
-- [ ] T023 [P] Create SiteConfig schema in lib/schemas/site-config.ts
-- [ ] T024 [P] Create ThemeConfig schema in lib/schemas/site-config.ts
-- [ ] T025 [P] Create LaunchPreferences schema in lib/schemas/site-config.ts
-- [ ] T026 Create schema barrel exports in lib/schemas/index.ts
+- [X] T012 [P] Create BusinessProfile schema in lib/schemas/business-profile.ts
+- [X] T013 [P] Create HeroContent schema in lib/schemas/section-content.ts
+- [X] T014 [P] Create ServicesContent schema in lib/schemas/section-content.ts
+- [X] T015 [P] Create AboutContent schema in lib/schemas/section-content.ts
+- [X] T016 [P] Create TestimonialsContent schema in lib/schemas/section-content.ts
+- [X] T017 [P] Create ContactContent schema in lib/schemas/section-content.ts
+- [X] T018 [P] Create ProcessContent schema in lib/schemas/section-content.ts
+- [X] T019 [P] Create PortfolioContent schema in lib/schemas/section-content.ts
+- [X] T020 [P] Create MenuContent schema in lib/schemas/section-content.ts
+- [X] T021 [P] Create LocationContent schema in lib/schemas/section-content.ts
+- [X] T022 [P] Create GalleryContent schema in lib/schemas/section-content.ts
+- [X] T023 [P] Create SiteConfig schema in lib/schemas/site-config.ts
+- [X] T024 [P] Create ThemeConfig schema in lib/schemas/site-config.ts
+- [X] T025 [P] Create LaunchPreferences schema in lib/schemas/site-config.ts
+- [X] T026 Create schema barrel exports in lib/schemas/index.ts
 
 ### Registries (Component & Industry Config)
 
-- [ ] T027 [P] Create variant personality matrix in lib/registry/variant-personalities.ts
-- [ ] T028 [P] Create industry configurations in lib/registry/industries.ts
-- [ ] T029 Create component registry in lib/registry/components.ts
+- [X] T027 [P] Create variant personality matrix in lib/registry/variant-personalities.ts
+- [X] T028 [P] Create industry configurations in lib/registry/industries.ts
+- [X] T029 Create component registry in lib/registry/components.ts
 
 ### Database Queries
 
-- [ ] T030 [P] Implement conversation CRUD queries in lib/db/queries.ts
-- [ ] T031 [P] Implement site CRUD queries in lib/db/queries.ts
-- [ ] T032 [P] Implement component usage tracking in lib/db/queries.ts
+- [X] T030 [P] Implement conversation CRUD queries in lib/db/queries.ts
+- [X] T031 [P] Implement site CRUD queries in lib/db/queries.ts
+- [X] T032 [P] Implement component usage tracking in lib/db/queries.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 

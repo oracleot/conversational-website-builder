@@ -379,11 +379,14 @@ export const LaunchConfirmation = ({ businessName, previewUrl }) => (
 **Environment Configuration**:
 ```
 NEXT_PUBLIC_SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_KEY=sb_publishable_
+SUPABASE_SECRET_KEY=sb_secret_
 OPENROUTER_API_KEY=
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 RESEND_API_KEY=
 ```
+
+**Note**: Using modern Supabase API keys (publishable/secret) instead of legacy anon/service_role keys.
 
 **Alternatives Considered**:
 - **Separate staging/production**: Over-engineered for MVP

@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/playwright/.cache/
+.vitest-cache/
 
 # next.js
 /.next/
@@ -23,6 +27,7 @@
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
@@ -32,6 +37,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -40,5 +46,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# supabase
+.supabase/
+supabase/
+
+# exports (generated projects)
+/exports/
+*.zip
+
 # agentic docs
 .github/docs
+
+# Misc
+.playwright-mcp/

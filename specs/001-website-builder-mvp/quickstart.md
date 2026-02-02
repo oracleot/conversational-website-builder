@@ -28,10 +28,10 @@ pnpm install
 Create `.env.local` in the project root:
 
 ```bash
-# Supabase
+# Supabase (Modern API Keys - recommended approach)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_KEY=sb_publishable_your-publishable-key
+SUPABASE_SECRET_KEY=sb_secret_your-secret-key
 
 # OpenRouter (model-agnostic access)
 OPENROUTER_API_KEY=sk-or-your-openrouter-api-key
@@ -51,8 +51,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ### Create Supabase Project
 
 1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Copy the project URL and anon key to `.env.local`
-3. Go to Settings → API and copy the service role key
+2. Copy the project URL from Project Settings
+3. Go to Settings → API Keys (not "Legacy API Keys")
+4. Copy the **publishable** key (starts with `sb_publishable_`) to `.env.local` as `NEXT_PUBLIC_SUPABASE_KEY`
+5. Copy the **secret** key (starts with `sb_secret_`) to `.env.local` as `SUPABASE_SECRET_KEY`
 
 ### Run Migrations
 
