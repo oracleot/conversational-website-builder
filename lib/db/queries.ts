@@ -1,10 +1,16 @@
-import { getServerClient } from './client';
 import type {
   BusinessProfile,
   SiteConfig,
   LaunchPreferences,
 } from '@/lib/schemas';
-import type { Database, ConversationStep, IndustryType, SiteStatus, Json } from './types';
+import type { Database, ConversationStep, IndustryType, SiteStatus, Json, Message } from './types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+type TypedSupabaseClient = SupabaseClient<Database>;
+
+// Type for conversation rows from database
+type ConversationRow = Database['public']['Tables']['conversations']['Row'];
+type SiteRow = Database['public']['Tables']['sites']['Row'];
 
 /**
  * Database queries for conversations, sites, and component usage
@@ -17,9 +23,10 @@ export interface CreateConversationParams {
   industry?: IndustryType;
 }
 
-export async function createConversation(params: CreateConversationParams = {}) {
-  const supabase = getServerClient();
-
+export async function createConversation(
+  supabase: TypedSupabaseClient,
+  params: CreateConversationParams = {}
+) {
   const { data, error } = await supabase
     .from('conversations')
     .insert({
@@ -27,48 +34,54 @@ export async function createConversation(params: CreateConversationParams = {}) 
       industry: params.industry || null,
       current_step: 'industry_selection' as ConversationStep,
       messages: [] as Json[],
-    } as Database['public']['Tables']['conversations']['Insert'])
+    })
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+  
+  // Transform to API response format
+  return transformConversation(data as unknown as ConversationRow);
 }
 
-export async function getConversation(conversationId: string) {
-  const supabase = getServerClient();
-
+export async function getConversation(
+  supabase: TypedSupabaseClient,
+  conversationId: string
+) {
   const { data, error } = await supabase
     .from('conversations')
     .select('*')
     .eq('id', conversationId)
     .single();
 
-  if (error) throw error;
-  return data;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  
+  return transformConversation(data as unknown as ConversationRow);
 }
 
 export interface UpdateConversationParams {
   industry?: IndustryType;
   currentStep?: ConversationStep;
   businessProfile?: BusinessProfile;
-  messages?: unknown[];
+  messages?: Message[];
 }
 
 export async function updateConversation(
+  supabase: TypedSupabaseClient,
   conversationId: string,
   updates: UpdateConversationParams
 ) {
-  const supabase = getServerClient();
-
-  const updateData: Partial<Database['public']['Tables']['conversations']['Update']> = {};
+  const updateData: Record<string, unknown> = {};
 
   if (updates.industry !== undefined) updateData.industry = updates.industry;
   if (updates.currentStep !== undefined) updateData.current_step = updates.currentStep;
   if (updates.businessProfile !== undefined)
-    updateData.business_profile = updates.businessProfile as unknown as Database['public']['Tables']['conversations']['Update']['business_profile'];
+    updateData.business_profile = updates.businessProfile;
   if (updates.messages !== undefined)
-    updateData.messages = updates.messages as unknown as Database['public']['Tables']['conversations']['Update']['messages'];
+    updateData.messages = updates.messages;
 
   const { data, error } = await supabase
     .from('conversations')
@@ -77,13 +90,18 @@ export async function updateConversation(
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  
+  return transformConversation(data as unknown as ConversationRow);
 }
 
-export async function deleteConversation(conversationId: string) {
-  const supabase = getServerClient();
-
+export async function deleteConversation(
+  supabase: TypedSupabaseClient,
+  conversationId: string
+) {
   const { error } = await supabase
     .from('conversations')
     .delete()
@@ -92,9 +110,10 @@ export async function deleteConversation(conversationId: string) {
   if (error) throw error;
 }
 
-export async function getUserConversations(userId: string) {
-  const supabase = getServerClient();
-
+export async function getUserConversations(
+  supabase: TypedSupabaseClient,
+  userId: string
+) {
   const { data, error } = await supabase
     .from('conversations')
     .select('*')
@@ -102,7 +121,58 @@ export async function getUserConversations(userId: string) {
     .order('updated_at', { ascending: false });
 
   if (error) throw error;
-  return data;
+  return (data as unknown as ConversationRow[]).map(transformConversation);
+}
+
+/**
+ * Add a message to a conversation
+ */
+export async function addMessage(
+  supabase: TypedSupabaseClient,
+  conversationId: string,
+  message: Message
+) {
+  // First get current messages
+  const { data: conversation, error: fetchError } = await supabase
+    .from('conversations')
+    .select('messages')
+    .eq('id', conversationId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  const currentMessages = (conversation.messages || []) as unknown as Message[];
+  const updatedMessages = [...currentMessages, message];
+
+  // Update with new message
+  const { data, error } = await supabase
+    .from('conversations')
+    .update({ 
+      messages: updatedMessages as unknown as Json[],
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', conversationId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return transformConversation(data as unknown as ConversationRow);
+}
+
+/**
+ * Transform database row to API response format
+ */
+function transformConversation(row: Database['public']['Tables']['conversations']['Row']) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    industry: row.industry,
+    currentStep: row.current_step,
+    businessProfile: row.business_profile as BusinessProfile | null,
+    messages: (row.messages || []) as unknown as Message[],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
 }
 
 // ========== SITE QUERIES ==========
@@ -112,39 +182,45 @@ export interface CreateSiteParams {
   config: SiteConfig;
 }
 
-export async function createSite(params: CreateSiteParams) {
-  const supabase = getServerClient();
-
+export async function createSite(
+  supabase: TypedSupabaseClient,
+  params: CreateSiteParams
+) {
   const { data, error } = await supabase
     .from('sites')
     .insert({
       conversation_id: params.conversationId,
       config: params.config as unknown as Json,
       status: 'building' as SiteStatus,
-    } as Database['public']['Tables']['sites']['Insert'])
+    })
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+  return transformSite(data as unknown as SiteRow);
 }
 
-export async function getSite(siteId: string) {
-  const supabase = getServerClient();
-
+export async function getSite(
+  supabase: TypedSupabaseClient,
+  siteId: string
+) {
   const { data, error } = await supabase
     .from('sites')
     .select('*')
     .eq('id', siteId)
     .single();
 
-  if (error) throw error;
-  return data;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  return transformSite(data as unknown as SiteRow);
 }
 
-export async function getSiteByConversation(conversationId: string) {
-  const supabase = getServerClient();
-
+export async function getSiteByConversation(
+  supabase: TypedSupabaseClient,
+  conversationId: string
+) {
   const { data, error } = await supabase
     .from('sites')
     .select('*')
@@ -155,7 +231,7 @@ export async function getSiteByConversation(conversationId: string) {
     if (error.code === 'PGRST116') return null; // Not found
     throw error;
   }
-  return data;
+  return transformSite(data as unknown as SiteRow);
 }
 
 export interface UpdateSiteParams {
@@ -167,18 +243,20 @@ export interface UpdateSiteParams {
   launchedAt?: string;
 }
 
-export async function updateSite(siteId: string, updates: UpdateSiteParams) {
-  const supabase = getServerClient();
-
-  const updateData: Partial<Database['public']['Tables']['sites']['Update']> = {};
+export async function updateSite(
+  supabase: TypedSupabaseClient,
+  siteId: string,
+  updates: UpdateSiteParams
+) {
+  const updateData: Record<string, unknown> = {};
 
   if (updates.config !== undefined)
-    updateData.config = updates.config as unknown as Database['public']['Tables']['sites']['Update']['config'];
+    updateData.config = updates.config;
   if (updates.status !== undefined) updateData.status = updates.status;
   if (updates.previewUrl !== undefined) updateData.preview_url = updates.previewUrl;
   if (updates.exportUrl !== undefined) updateData.export_url = updates.exportUrl;
   if (updates.launchPreferences !== undefined)
-    updateData.launch_preferences = updates.launchPreferences as unknown as Database['public']['Tables']['sites']['Update']['launch_preferences'];
+    updateData.launch_preferences = updates.launchPreferences;
   if (updates.launchedAt !== undefined) updateData.launched_at = updates.launchedAt;
 
   const { data, error } = await supabase
@@ -188,8 +266,28 @@ export async function updateSite(siteId: string, updates: UpdateSiteParams) {
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  return transformSite(data as unknown as SiteRow);
+}
+
+/**
+ * Transform site database row to API response format
+ */
+function transformSite(row: Database['public']['Tables']['sites']['Row']) {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    config: row.config as unknown as SiteConfig,
+    status: row.status,
+    previewUrl: row.preview_url,
+    exportUrl: row.export_url,
+    launchPreferences: row.launch_preferences as unknown as LaunchPreferences | null,
+    createdAt: row.created_at,
+    launchedAt: row.launched_at
+  };
 }
 
 // ========== COMPONENT USAGE QUERIES ==========
@@ -201,9 +299,10 @@ export interface TrackComponentUsageParams {
   isOverride: boolean;
 }
 
-export async function trackComponentUsage(params: TrackComponentUsageParams) {
-  const supabase = getServerClient();
-
+export async function trackComponentUsage(
+  supabase: TypedSupabaseClient,
+  params: TrackComponentUsageParams
+) {
   const { data, error } = await supabase
     .from('component_usage')
     .insert({
@@ -211,7 +310,7 @@ export async function trackComponentUsage(params: TrackComponentUsageParams) {
       section_type: params.sectionType,
       variant_number: params.variantNumber,
       is_override: params.isOverride,
-    } as Database['public']['Tables']['component_usage']['Insert'])
+    })
     .select()
     .single();
 
@@ -219,9 +318,7 @@ export async function trackComponentUsage(params: TrackComponentUsageParams) {
   return data;
 }
 
-export async function getComponentUsageStats() {
-  const supabase = getServerClient();
-
+export async function getComponentUsageStats(supabase: TypedSupabaseClient) {
   const { data, error } = await supabase
     .from('component_usage')
     .select('section_type, variant_number, is_override, selected_at');
@@ -230,9 +327,10 @@ export async function getComponentUsageStats() {
   return data;
 }
 
-export async function getSiteComponentUsage(siteId: string) {
-  const supabase = getServerClient();
-
+export async function getSiteComponentUsage(
+  supabase: TypedSupabaseClient,
+  siteId: string
+) {
   const { data, error } = await supabase
     .from('component_usage')
     .select('*')
@@ -248,9 +346,11 @@ export async function getSiteComponentUsage(siteId: string) {
 /**
  * Link an anonymous conversation to an authenticated user
  */
-export async function linkConversationToUser(conversationId: string, userId: string) {
-  const supabase = getServerClient();
-
+export async function linkConversationToUser(
+  supabase: TypedSupabaseClient,
+  conversationId: string,
+  userId: string
+) {
   const { data, error } = await supabase
     .from('conversations')
     .update({ user_id: userId })
@@ -260,18 +360,17 @@ export async function linkConversationToUser(conversationId: string, userId: str
     .single();
 
   if (error) throw error;
-  return data;
+  return transformConversation(data as unknown as ConversationRow);
 }
 
 /**
  * Check if a conversation belongs to a user
  */
 export async function isConversationOwner(
+  supabase: TypedSupabaseClient,
   conversationId: string,
   userId: string
 ): Promise<boolean> {
-  const supabase = getServerClient();
-
   const { data, error } = await supabase
     .from('conversations')
     .select('user_id')
@@ -280,4 +379,207 @@ export async function isConversationOwner(
 
   if (error) return false;
   return data.user_id === userId || data.user_id === null;
+}
+
+// ========== SITE DRAFT FUNCTIONS (Standalone) ==========
+
+/**
+ * In-memory site draft storage for demo purposes
+ * In production, this would use Supabase
+ */
+const siteDrafts = new Map<string, {
+  id: string;
+  sessionId: string;
+  businessProfile: Record<string, unknown>;
+  content: Record<string, unknown>;
+  siteConfig: Record<string, unknown>;
+  slug?: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}>();
+
+export interface SaveDraftParams {
+  sessionId: string;
+  businessProfile: Record<string, unknown>;
+  content: Record<string, unknown>;
+  siteConfig: Record<string, unknown>;
+}
+
+/**
+ * Save or update a site draft
+ */
+export async function saveSiteDraft(params: SaveDraftParams): Promise<{
+  success: boolean;
+  siteId?: string;
+  updatedAt?: string;
+  error?: string;
+}> {
+  try {
+    const existing = siteDrafts.get(params.sessionId);
+    const now = new Date().toISOString();
+    
+    if (existing) {
+      // Update existing draft
+      existing.businessProfile = params.businessProfile;
+      existing.content = params.content;
+      existing.siteConfig = params.siteConfig;
+      existing.updatedAt = now;
+      siteDrafts.set(params.sessionId, existing);
+      
+      return {
+        success: true,
+        siteId: existing.id,
+        updatedAt: now,
+      };
+    } else {
+      // Create new draft
+      const siteId = `site_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      siteDrafts.set(params.sessionId, {
+        id: siteId,
+        sessionId: params.sessionId,
+        businessProfile: params.businessProfile,
+        content: params.content,
+        siteConfig: params.siteConfig,
+        createdAt: now,
+        updatedAt: now,
+      });
+      
+      return {
+        success: true,
+        siteId,
+        updatedAt: now,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to save draft',
+    };
+  }
+}
+
+/**
+ * Get a site draft by session ID
+ */
+export async function getSiteDraft(sessionId: string): Promise<{
+  success: boolean;
+  site?: {
+    id: string;
+    sessionId: string;
+    businessProfile: Record<string, unknown>;
+    content: Record<string, unknown>;
+    siteConfig: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+  };
+  error?: string;
+}> {
+  try {
+    const draft = siteDrafts.get(sessionId);
+    
+    if (!draft) {
+      return {
+        success: false,
+        error: 'Site draft not found',
+      };
+    }
+    
+    return {
+      success: true,
+      site: draft,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get draft',
+    };
+  }
+}
+
+/**
+ * Get a site by its slug
+ */
+export async function getSiteBySlug(slug: string): Promise<{
+  success: boolean;
+  site?: {
+    id: string;
+    slug: string;
+    businessProfile: { businessName: string };
+    content: Record<string, unknown>;
+    siteConfig: Record<string, unknown>;
+    publishedAt?: string;
+  };
+  error?: string;
+}> {
+  try {
+    // Find site with matching slug
+    for (const draft of siteDrafts.values()) {
+      if (draft.slug === slug || draft.id === slug) {
+        return {
+          success: true,
+          site: {
+            id: draft.id,
+            slug: draft.slug || draft.id,
+            businessProfile: draft.businessProfile as { businessName: string },
+            content: draft.content,
+            siteConfig: draft.siteConfig,
+            publishedAt: draft.publishedAt,
+          },
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      error: 'Site not found',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get site',
+    };
+  }
+}
+
+export interface PublishParams {
+  siteId: string;
+  slug: string;
+  customDomain?: string;
+}
+
+/**
+ * Publish a site (make it publicly accessible)
+ */
+export async function publishSite(params: PublishParams): Promise<{
+  success: boolean;
+  publishedAt?: string;
+  error?: string;
+}> {
+  try {
+    // Find the site by ID
+    for (const [sessionId, draft] of siteDrafts.entries()) {
+      if (draft.id === params.siteId) {
+        const now = new Date().toISOString();
+        draft.slug = params.slug;
+        draft.publishedAt = now;
+        siteDrafts.set(sessionId, draft);
+        
+        return {
+          success: true,
+          publishedAt: now,
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      error: 'Site not found',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to publish site',
+    };
+  }
 }

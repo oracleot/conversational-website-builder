@@ -79,39 +79,39 @@
 
 ### AI Orchestration for US1
 
-- [ ] T033 [US1] Create system prompts for conversation orchestration in lib/chat/prompts.ts
-- [ ] T034 [US1] Create content extraction prompts per section type in lib/chat/prompts.ts
-- [ ] T035 [US1] Implement ConversationOrchestrator class in lib/chat/orchestrator.ts
-- [ ] T036 [US1] Implement content extraction with Zod validation in lib/chat/orchestrator.ts
+- [X] T033 [US1] Create system prompts for conversation orchestration in lib/chat/prompts.ts
+- [X] T034 [US1] Create content extraction prompts per section type in lib/chat/prompts.ts
+- [X] T035 [US1] Implement ConversationOrchestrator class in lib/chat/orchestrator.ts
+- [X] T036 [US1] Implement content extraction with Zod validation in lib/chat/orchestrator.ts
 
 ### API Routes for US1
 
-- [ ] T037 [US1] Implement POST /api/conversation (create) in app/api/conversation/route.ts
-- [ ] T038 [US1] Implement GET /api/conversation/[id] in app/api/conversation/[conversationId]/route.ts
-- [ ] T039 [US1] Implement PATCH /api/conversation/[id] in app/api/conversation/[conversationId]/route.ts
-- [ ] T040 [US1] Implement POST /api/chat (streaming) in app/api/chat/route.ts
-- [ ] T041 [US1] Implement POST /api/conversation/[id]/extract in app/api/conversation/[conversationId]/extract/route.ts
+- [X] T037 [US1] Implement POST /api/conversation (create) in app/api/conversation/route.ts
+- [X] T038 [US1] Implement GET /api/conversation/[id] in app/api/conversation/[conversationId]/route.ts
+- [X] T039 [US1] Implement PATCH /api/conversation/[id] in app/api/conversation/[conversationId]/route.ts
+- [X] T040 [US1] Implement POST /api/chat (streaming) in app/api/chat/route.ts
+- [X] T041 [US1] Implement POST /api/conversation/[id]/extract in app/api/conversation/[conversationId]/extract/route.ts
 
 ### Chat UI Components for US1
 
-- [ ] T042 [P] [US1] Create chat-input component in components/chat/chat-input.tsx
-- [ ] T043 [P] [US1] Create message-list component in components/chat/message-list.tsx
-- [ ] T044 [P] [US1] Create progress-indicator component in components/chat/progress-indicator.tsx
-- [ ] T045 [US1] Create chat-interface component in components/chat/chat-interface.tsx
+- [X] T042 [P] [US1] Create chat-input component in components/chat/chat-input.tsx
+- [X] T043 [P] [US1] Create message-list component in components/chat/message-list.tsx
+- [X] T044 [P] [US1] Create progress-indicator component in components/chat/progress-indicator.tsx
+- [X] T045 [US1] Create chat-interface component in components/chat/chat-interface.tsx
 
 ### Builder Page for US1
 
-- [ ] T046 [US1] Create builder-layout component in components/builder/builder-layout.tsx
-- [ ] T047 [US1] Create builder page in app/builder/[conversationId]/page.tsx
-- [ ] T048 [US1] Create Zustand store for conversation state in lib/stores/conversation-store.ts
-- [ ] T048a [US1] Integrate progress-indicator into chat-interface and builder-layout for conversation step tracking
+- [X] T046 [US1] Create builder-layout component in components/builder/builder-layout.tsx
+- [X] T047 [US1] Create builder page in app/builder/[conversationId]/page.tsx
+- [X] T048 [US1] Create Zustand store for conversation state in lib/stores/conversation-store.ts
+- [X] T048a [US1] Integrate progress-indicator into chat-interface and builder-layout for conversation step tracking
 
 ### Tests for US1 (RED-GREEN-REFACTOR)
 
-- [ ] T048b [P] [US1] Write unit tests for ConversationOrchestrator in tests/unit/orchestrator.test.ts
-- [ ] T048c [P] [US1] Write unit tests for content extraction in tests/unit/extraction.test.ts
-- [ ] T048d [P] [US1] Write contract tests for AI structured outputs in tests/contract/ai-outputs.test.ts
-- [ ] T048e [US1] Write integration tests for conversation API endpoints in tests/integration/conversation-api.test.ts
+- [X] T048b [P] [US1] Write unit tests for ConversationOrchestrator in tests/unit/orchestrator.test.ts
+- [X] T048c [P] [US1] Write unit tests for content extraction in tests/unit/extraction.test.ts
+- [X] T048d [P] [US1] Write contract tests for AI structured outputs in tests/contract/ai-outputs.test.ts
+- [X] T048e [US1] Write integration tests for conversation API endpoints in tests/integration/conversation-api.test.ts
 
 **Checkpoint**: User Story 1 complete - Users can have a full guided conversation and see structured content extracted
 
@@ -125,65 +125,67 @@
 
 ### Core Section Components (Service Industry)
 
-- [ ] T049 [P] [US2] Create service-hero-1.tsx (professional) in components/sections/hero/
-- [ ] T050 [P] [US2] Create service-hero-2.tsx (modern) in components/sections/hero/
-- [ ] T051 [P] [US2] Create service-hero-3.tsx (bold) in components/sections/hero/
-- [ ] T052 [P] [US2] Create service-hero-4.tsx (elegant) in components/sections/hero/
-- [ ] T053 [P] [US2] Create service-hero-5.tsx (friendly) in components/sections/hero/
-- [ ] T054 [P] [US2] Create service-offerings-1.tsx in components/sections/services/
-- [ ] T055 [P] [US2] Create service-offerings-2.tsx in components/sections/services/
-- [ ] T056 [P] [US2] Create service-offerings-3.tsx in components/sections/services/
-- [ ] T057 [P] [US2] Create service-offerings-4.tsx in components/sections/services/
-- [ ] T058 [P] [US2] Create service-offerings-5.tsx in components/sections/services/
-- [ ] T059 [P] [US2] Create shared-about-1.tsx in components/sections/about/
-- [ ] T060 [P] [US2] Create shared-about-2.tsx in components/sections/about/
-- [ ] T061 [P] [US2] Create shared-about-3.tsx in components/sections/about/
-- [ ] T062 [P] [US2] Create shared-about-4.tsx in components/sections/about/
-- [ ] T063 [P] [US2] Create shared-about-5.tsx in components/sections/about/
-- [ ] T064 [P] [US2] Create service-process-1.tsx in components/sections/process/
-- [ ] T065 [P] [US2] Create service-process-2.tsx in components/sections/process/
-- [ ] T066 [P] [US2] Create service-process-3.tsx in components/sections/process/
-- [ ] T067 [P] [US2] Create service-process-4.tsx in components/sections/process/
-- [ ] T068 [P] [US2] Create service-process-5.tsx in components/sections/process/
-- [ ] T069 [P] [US2] Create shared-testimonials-1.tsx in components/sections/testimonials/
-- [ ] T070 [P] [US2] Create shared-testimonials-2.tsx in components/sections/testimonials/
-- [ ] T071 [P] [US2] Create shared-testimonials-3.tsx in components/sections/testimonials/
-- [ ] T072 [P] [US2] Create shared-testimonials-4.tsx in components/sections/testimonials/
-- [ ] T073 [P] [US2] Create shared-testimonials-5.tsx in components/sections/testimonials/
-- [ ] T074 [P] [US2] Create service-portfolio-1.tsx in components/sections/portfolio/
-- [ ] T075 [P] [US2] Create service-portfolio-2.tsx in components/sections/portfolio/
-- [ ] T076 [P] [US2] Create service-portfolio-3.tsx in components/sections/portfolio/
-- [ ] T077 [P] [US2] Create service-portfolio-4.tsx in components/sections/portfolio/
-- [ ] T078 [P] [US2] Create service-portfolio-5.tsx in components/sections/portfolio/
-- [ ] T079 [P] [US2] Create shared-contact-1.tsx in components/sections/contact/
-- [ ] T080 [P] [US2] Create shared-contact-2.tsx in components/sections/contact/
-- [ ] T081 [P] [US2] Create shared-contact-3.tsx in components/sections/contact/
-- [ ] T082 [P] [US2] Create shared-contact-4.tsx in components/sections/contact/
-- [ ] T083 [P] [US2] Create shared-contact-5.tsx in components/sections/contact/
+- [X] T049 [P] [US2] Create service-hero-1.tsx (professional) in components/sections/hero/
+- [X] T050 [P] [US2] Create service-hero-2.tsx (modern) in components/sections/hero/
+- [X] T051 [P] [US2] Create service-hero-3.tsx (bold) in components/sections/hero/
+- [X] T052 [P] [US2] Create service-hero-4.tsx (elegant) in components/sections/hero/
+- [X] T053 [P] [US2] Create service-hero-5.tsx (friendly) in components/sections/hero/
+- [X] T054 [P] [US2] Create service-offerings-1.tsx in components/sections/services/
+- [X] T055 [P] [US2] Create service-offerings-2.tsx in components/sections/services/
+- [X] T056 [P] [US2] Create service-offerings-3.tsx in components/sections/services/
+- [X] T057 [P] [US2] Create service-offerings-4.tsx in components/sections/services/
+- [X] T058 [P] [US2] Create service-offerings-5.tsx in components/sections/services/
+- [X] T059 [P] [US2] Create shared-about-1.tsx in components/sections/about/
+- [X] T060 [P] [US2] Create shared-about-2.tsx in components/sections/about/
+- [X] T061 [P] [US2] Create shared-about-3.tsx in components/sections/about/
+- [X] T062 [P] [US2] Create shared-about-4.tsx in components/sections/about/
+- [X] T063 [P] [US2] Create shared-about-5.tsx in components/sections/about/
+- [X] T064 [P] [US2] Create service-process-1.tsx in components/sections/process/
+- [X] T065 [P] [US2] Create service-process-2.tsx in components/sections/process/
+- [X] T066 [P] [US2] Create service-process-3.tsx in components/sections/process/
+- [X] T067 [P] [US2] Create service-process-4.tsx in components/sections/process/
+- [X] T068 [P] [US2] Create service-process-5.tsx in components/sections/process/
+- [X] T069 [P] [US2] Create shared-testimonials-1.tsx in components/sections/testimonials/
+- [X] T070 [P] [US2] Create shared-testimonials-2.tsx in components/sections/testimonials/
+- [X] T071 [P] [US2] Create shared-testimonials-3.tsx in components/sections/testimonials/
+- [X] T072 [P] [US2] Create shared-testimonials-4.tsx in components/sections/testimonials/
+- [X] T073 [P] [US2] Create shared-testimonials-5.tsx in components/sections/testimonials/
+- [X] T074 [P] [US2] Create service-portfolio-1.tsx in components/sections/portfolio/
+- [X] T075 [P] [US2] Create service-portfolio-2.tsx in components/sections/portfolio/
+- [X] T076 [P] [US2] Create service-portfolio-3.tsx in components/sections/portfolio/
+- [X] T077 [P] [US2] Create service-portfolio-4.tsx in components/sections/portfolio/
+- [X] T078 [P] [US2] Create service-portfolio-5.tsx in components/sections/portfolio/
+- [X] T079 [P] [US2] Create shared-contact-1.tsx in components/sections/contact/
+- [X] T080 [P] [US2] Create shared-contact-2.tsx in components/sections/contact/
+- [X] T081 [P] [US2] Create shared-contact-3.tsx in components/sections/contact/
+- [X] T082 [P] [US2] Create shared-contact-4.tsx in components/sections/contact/
+- [X] T083 [P] [US2] Create shared-contact-5.tsx in components/sections/contact/
 
 ### Preview System for US2
 
-- [ ] T084 [US2] Create dynamic component loader in lib/preview/component-loader.ts
-- [ ] T085 [US2] Create site-preview component in components/preview/site-preview.tsx
-- [ ] T086 [US2] Create section-wrapper component with hover state in components/preview/section-wrapper.tsx
-- [ ] T087 [US2] Create Zustand store for site config in lib/stores/site-store.ts
-- [ ] T088 [US2] Integrate preview into builder-layout with split-screen in components/builder/builder-layout.tsx
-- [ ] T089 [US2] Add smooth scroll to newly added sections in components/preview/site-preview.tsx
-- [ ] T090 [US2] Add Framer Motion animations for section transitions in components/preview/section-wrapper.tsx
+- [X] T084 [US2] Create dynamic component loader in components/sections/preview/component-loader.tsx
+- [X] T085 [US2] Create site-preview component in components/sections/preview/site-preview.tsx
+- [X] T086 [US2] Create section-wrapper component with hover state in components/sections/preview/section-wrapper.tsx
+- [X] T087 [US2] Create Zustand store for site config in lib/stores/site-store.ts
+- [X] T088 [US2] Integrate preview into builder-layout with split-screen in components/builder/builder-layout.tsx
+- [X] T089 [US2] Add smooth scroll to newly added sections in components/sections/preview/site-preview.tsx
+- [X] T090 [US2] Add Framer Motion animations for section transitions in components/sections/preview/section-wrapper.tsx
 
 ### Site API for US2
 
-- [ ] T091 [US2] Implement POST /api/site (create from conversation) in app/api/site/route.ts
-- [ ] T092 [US2] Implement GET /api/site/[id] in app/api/site/[siteId]/route.ts
-- [ ] T093 [US2] Implement PATCH /api/site/[id] in app/api/site/[siteId]/route.ts
-- [ ] T094 [US2] Implement POST /api/site/[id]/section in app/api/site/[siteId]/section/route.ts
-- [ ] T095 [US2] Implement PATCH /api/site/[id]/section/[sectionId] in app/api/site/[siteId]/section/[sectionId]/route.ts
+- [X] T091 [US2] Implement POST /api/site/generate (create from conversation) in app/api/site/generate/route.ts
+- [X] T091a [US2] Implement POST /api/site/save (save draft) in app/api/site/save/route.ts
+- [X] T091b [US2] Implement POST /api/site/publish (publish site) in app/api/site/publish/route.ts
+- [X] T092 [US2] Implement GET /api/site/[id] in app/api/site/[siteId]/route.ts
+- [X] T093 [US2] Implement PATCH /api/site/[id] in app/api/site/[siteId]/route.ts
+- [X] T094 [US2] Implement POST /api/site/[id]/section in app/api/site/[siteId]/section/route.ts
+- [X] T095 [US2] Implement PATCH /api/site/[id]/section/[sectionId] in app/api/site/[siteId]/section/[sectionId]/route.ts
 
 ### Tests for US2 (RED-GREEN-REFACTOR)
 
-- [ ] T095a [P] [US2] Write unit tests for component-loader in tests/unit/component-loader.test.ts
-- [ ] T095b [P] [US2] Write component rendering tests for section components in tests/unit/sections.test.ts
-- [ ] T095c [US2] Write integration tests for site API endpoints in tests/integration/site-api.test.ts
+- [X] T095a [P] [US2] Write unit tests for component-loader in tests/unit/component-loader.test.ts
+- [X] T095b [P] [US2] Write component rendering tests for section components in tests/unit/sections.test.ts
+- [X] T095c [US2] Write integration tests for site API endpoints in tests/integration/site-api.test.ts
 
 **Checkpoint**: User Story 2 complete - Live preview updates in real-time with professional service business components
 

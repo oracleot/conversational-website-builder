@@ -31,6 +31,116 @@ export type ConversationStep =
 
 export type SiteStatus = 'building' | 'preview' | 'awaiting_launch' | 'launched';
 
+// Section types for service industry
+export type ServiceSectionType = 
+  | 'hero'
+  | 'services'
+  | 'about'
+  | 'process'
+  | 'portfolio'
+  | 'testimonials'
+  | 'contact';
+
+// Section types for local industry
+export type LocalSectionType = 
+  | 'hero'
+  | 'menu'
+  | 'about'
+  | 'location'
+  | 'gallery'
+  | 'testimonials'
+  | 'contact';
+
+// Combined section type
+export type SectionType = 
+  | 'hero'
+  | 'services'
+  | 'menu'
+  | 'about'
+  | 'process'
+  | 'portfolio'
+  | 'testimonials'
+  | 'location'
+  | 'gallery'
+  | 'contact';
+
+// Message in conversation history
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  metadata?: {
+    step?: ConversationStep;
+    extractedContent?: unknown;
+  };
+}
+
+// Business profile extracted from conversation
+export interface BusinessProfile {
+  name: string;
+  industry: IndustryType;
+  businessType: string;
+  tagline: string;
+  description: string;
+  brandPersonality: string[];
+  colors?: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+  contact: {
+    phone?: string;
+    email: string;
+    address?: string;
+  };
+}
+
+// Section configuration in site config
+export interface SectionConfig {
+  id: string;
+  type: SectionType;
+  selectedVariant: number;
+  content: Record<string, unknown>;
+  aiSelected: boolean;
+  aiReasoning?: string;
+}
+
+// Theme configuration
+export interface ThemeConfig {
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    foreground: string;
+  };
+  fonts: {
+    heading: string;
+    body: string;
+  };
+  borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
+}
+
+// Full site configuration
+export interface SiteConfig {
+  businessProfile: BusinessProfile;
+  sections: SectionConfig[];
+  theme: ThemeConfig;
+  sectionOrder: SectionType[];
+}
+
+// Launch preferences
+export interface LaunchPreferences {
+  email: string;
+  phone?: string;
+  imagePreference: 'placeholders' | 'provide_own' | 'need_photography';
+  domainPreference: 'buy_new' | 'use_existing' | 'hosted_subdomain';
+  existingDomain?: string;
+  timeline: 'asap' | 'this_week' | 'this_month' | 'no_rush';
+  notes?: string;
+}
+
 export interface Database {
   public: {
     Tables: {

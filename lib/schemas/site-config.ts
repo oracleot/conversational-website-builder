@@ -16,7 +16,7 @@ import {
 /**
  * Section Type Enum
  */
-export const SectionTypeSchema = z.enum([
+const sectionTypes = [
   'hero',
   'services',
   'menu',
@@ -27,13 +27,15 @@ export const SectionTypeSchema = z.enum([
   'location',
   'gallery',
   'contact',
-]);
+] as const;
+export const SectionTypeSchema = z.enum(sectionTypes);
 
 export type SectionType = z.infer<typeof SectionTypeSchema>;
 
 /**
  * Theme Configuration Schema
  */
+const borderRadiusOptions = ['none', 'sm', 'md', 'lg', 'full'] as const;
 export const ThemeConfigSchema = z.object({
   colors: z.object({
     primary: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
@@ -46,7 +48,7 @@ export const ThemeConfigSchema = z.object({
     heading: z.string(),
     body: z.string(),
   }),
-  borderRadius: z.enum(['none', 'sm', 'md', 'lg', 'full']),
+  borderRadius: z.enum(borderRadiusOptions),
 });
 
 export type ThemeConfig = z.infer<typeof ThemeConfigSchema>;

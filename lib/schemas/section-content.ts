@@ -24,6 +24,7 @@ export type HeroContent = z.infer<typeof HeroContentSchema>;
 export const ServicesContentSchema = z.object({
   sectionTitle: z.string().min(1),
   sectionSubtitle: z.string().optional(),
+  sectionDescription: z.string().optional(),
   services: z
     .array(
       z.object({
@@ -69,8 +70,10 @@ export type MenuContent = z.infer<typeof MenuContentSchema>;
  */
 export const AboutContentSchema = z.object({
   sectionTitle: z.string().min(1),
+  title: z.string().optional(),
   headline: z.string().min(1),
   story: z.string().min(1).max(1000),
+  mission: z.string().optional(),
   highlights: z
     .array(
       z.object({
@@ -79,7 +82,21 @@ export const AboutContentSchema = z.object({
       })
     )
     .optional(),
+  values: z
+    .array(z.string())
+    .optional(),
+  stats: z
+    .array(
+      z.object({
+        value: z.string(),
+        label: z.string(),
+      })
+    )
+    .optional(),
   image: z.string().optional(),
+  founderName: z.string().optional(),
+  founderRole: z.string().optional(),
+  founderImage: z.string().optional(),
 });
 
 export type AboutContent = z.infer<typeof AboutContentSchema>;
@@ -90,6 +107,7 @@ export type AboutContent = z.infer<typeof AboutContentSchema>;
 export const ProcessContentSchema = z.object({
   sectionTitle: z.string().min(1),
   sectionSubtitle: z.string().optional(),
+  sectionDescription: z.string().optional(),
   steps: z
     .array(
       z.object({
@@ -97,6 +115,7 @@ export const ProcessContentSchema = z.object({
         number: z.number().int().positive(),
         title: z.string().min(1),
         description: z.string().min(1),
+        duration: z.string().optional(),
       })
     )
     .min(3)
@@ -110,6 +129,7 @@ export type ProcessContent = z.infer<typeof ProcessContentSchema>;
  */
 export const PortfolioContentSchema = z.object({
   sectionTitle: z.string().min(1),
+  sectionDescription: z.string().optional(),
   projects: z
     .array(
       z.object({
@@ -119,6 +139,7 @@ export const PortfolioContentSchema = z.object({
         category: z.string().optional(),
         image: z.string().optional(),
         link: z.string().optional(),
+        results: z.array(z.string()).optional(),
       })
     )
     .min(1)
@@ -132,15 +153,18 @@ export type PortfolioContent = z.infer<typeof PortfolioContentSchema>;
  */
 export const TestimonialsContentSchema = z.object({
   sectionTitle: z.string().min(1),
+  sectionDescription: z.string().optional(),
   testimonials: z
     .array(
       z.object({
         id: z.string(),
         quote: z.string().min(1).max(500),
         author: z.string().min(1),
+        name: z.string().optional(), // Alternative to author
         role: z.string().optional(),
         company: z.string().optional(),
         avatar: z.string().optional(),
+        image: z.string().optional(), // Alternative to avatar
         rating: z.number().int().min(1).max(5).optional(),
       })
     )
@@ -201,12 +225,21 @@ export type GalleryContent = z.infer<typeof GalleryContentSchema>;
  */
 export const ContactContentSchema = z.object({
   sectionTitle: z.string().min(1),
+  heading: z.string().optional(),
+  subheading: z.string().optional(),
   headline: z.string().optional(),
   subtext: z.string().optional(),
   showForm: z.boolean(),
   formFields: z
     .array(z.enum(['name', 'email', 'phone', 'message', 'subject']))
     .optional(),
+  // Direct access fields for simpler components
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  hours: z.string().optional(),
+  cta: z.string().optional(),
+  // Nested contact info (alternative structure)
   contactInfo: z
     .object({
       email: z.string().email().optional(),
