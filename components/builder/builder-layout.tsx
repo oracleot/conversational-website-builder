@@ -175,6 +175,54 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     });
   }, [extractedContent, addSection, getVariantForPersonality]);
 
+  // Persist site draft to backend when sections change (for variant API)
+  useEffect(() => {
+    // Only save if we have sections to persist
+    if (sections.length === 0) return;
+    
+    const rawProfile = extractedContent.business_profile || initialData.businessProfile || {};
+    const businessProfile = {
+      ...rawProfile as Record<string, unknown>,
+      // Ensure businessName exists (API requires it)
+      businessName: (rawProfile as Record<string, unknown>).businessName || 
+                    (rawProfile as Record<string, unknown>).name || 
+                    'Untitled Business',
+      industry: (rawProfile as Record<string, unknown>).industry || 'service',
+      services: (rawProfile as Record<string, unknown>).services || [],
+      targetAudience: (rawProfile as Record<string, unknown>).targetAudience || '',
+      uniqueValue: (rawProfile as Record<string, unknown>).uniqueValue || '',
+    };
+    const siteConfig = {
+      personality: 'professional',
+      colorScheme: 'default',
+      sections: sections.map(s => ({
+        id: s.id,
+        type: s.type,
+        order: s.order,
+        variant: s.variant,
+        isVisible: s.isVisible,
+      })),
+    };
+    const content: Record<string, unknown> = {};
+    sections.forEach(s => {
+      if (s.content) {
+        content[s.type] = s.content;
+      }
+    });
+
+    // Save to backend (debounced via async)
+    fetch('/api/site/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: conversationId,
+        businessProfile,
+        content,
+        siteConfig,
+      }),
+    }).catch(err => console.error('Failed to save site draft:', err));
+  }, [sections, extractedContent, conversationId, initialData.businessProfile]);
+
   const handleStepChange = (step: ConversationStep) => {
     setCurrentStep(step);
   };
@@ -332,6 +380,7 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
                 previewMode={previewMode}
                 scrollToSection={scrollToSection}
                 onScrollComplete={clearScrollTarget}
+                siteId={conversationId}
               />
             </motion.div>
           )}
@@ -348,9 +397,10 @@ interface PreviewPanelProps {
   previewMode: 'desktop' | 'tablet' | 'mobile';
   scrollToSection: string | null;
   onScrollComplete: () => void;
+  siteId: string | null;
 }
 
-function PreviewPanel({ content, previewMode, scrollToSection, onScrollComplete }: PreviewPanelProps) {
+function PreviewPanel({ content, previewMode, scrollToSection, onScrollComplete, siteId }: PreviewPanelProps) {
   const hasContent = Object.keys(content).length > 0;
 
   // Get preview container width based on mode
@@ -403,6 +453,7 @@ function PreviewPanel({ content, previewMode, scrollToSection, onScrollComplete 
           activeSectionId={scrollToSection ?? undefined}
           className="min-h-full"
           isEditable={true}
+          siteId={siteId}
         />
       </div>
     </div>

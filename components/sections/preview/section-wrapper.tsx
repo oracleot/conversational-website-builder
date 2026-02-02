@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import type { SectionType } from '@/lib/db/types';
 import { VariantCarousel, useVariantOptions, useVariantSwitch } from './variant-carousel';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface SectionWrapperProps {
   children: ReactNode;
@@ -105,7 +106,12 @@ export function SectionWrapper({
   const handleVariantSelect = useCallback(
     async (variant: number) => {
       if (sectionType && siteId) {
-        await switchVariant(id, sectionType, variant);
+        try {
+          await switchVariant(id, sectionType, variant);
+          toast.success('Variant updated');
+        } catch {
+          toast.error('Variant update failed');
+        }
       }
       onVariantChange?.(variant);
     },
@@ -128,6 +134,7 @@ export function SectionWrapper({
           <SectionOverlay
             isHovered={isHovered}
             showCarousel={showCarousel}
+            sectionId={id}
             sectionType={sectionType}
             currentVariant={currentVariant}
             aiReasoning={aiReasoning || reasoning}
@@ -165,6 +172,7 @@ export function SectionWrapper({
         <SectionOverlay
           isHovered={isHovered}
           showCarousel={showCarousel}
+          sectionId={id}
           sectionType={sectionType}
           currentVariant={currentVariant}
           aiReasoning={aiReasoning || reasoning}
@@ -196,6 +204,7 @@ export function SectionWrapper({
 interface SectionOverlayProps {
   isHovered: boolean;
   showCarousel: boolean;
+  sectionId: string;
   sectionType?: SectionType;
   currentVariant: number;
   aiReasoning?: string;
@@ -217,6 +226,7 @@ interface SectionOverlayProps {
 function SectionOverlay({
   isHovered,
   showCarousel,
+  sectionId,
   sectionType,
   currentVariant,
   aiReasoning,
@@ -320,7 +330,7 @@ function SectionOverlay({
         {showCarousel && sectionType && (
           <div className="absolute top-4 right-4 z-50">
             <VariantCarousel
-              sectionId={sectionType}
+              sectionId={sectionId}
               sectionType={sectionType}
               currentVariant={currentVariant}
               variants={variants}

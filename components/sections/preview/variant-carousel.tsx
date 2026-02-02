@@ -51,6 +51,10 @@ export function VariantCarousel({
   const [isAnimating, setIsAnimating] = useState(false);
   const updateSectionVariant = useSiteStore((s) => s.updateSectionVariant);
 
+  useEffect(() => {
+    setSelectedVariant(currentVariant);
+  }, [currentVariant]);
+
   // Handle variant selection with animation
   const handleSelect = useCallback(
     async (variant: number) => {

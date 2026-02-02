@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { ComponentLoader, preloadSectionComponent } from './component-loader';
 import { SectionWrapper } from './section-wrapper';
 import { PERSONALITY_VARIANT_MAP, type SectionType, type VariantNumber } from '../index';
+import { useSiteStore } from '@/lib/stores/site-store';
 import type {
   HeroContent,
   ServicesContent,
@@ -71,6 +72,22 @@ export function SitePreview({
   // Determine variant based on personality
   const defaultVariant = (PERSONALITY_VARIANT_MAP[personality] || 1) as VariantNumber;
 
+  // Subscribe directly to store sections for reactive variant updates
+  const storeSections = useSiteStore((s) => s.sections);
+
+  // Build variant map from store sections (takes priority over variantOverrides)
+  const storeVariantMap = useMemo(() => {
+    const map: Partial<Record<SectionType, VariantNumber>> = {};
+    storeSections.forEach((section) => {
+      // Only include sections that match our known SectionTypes
+      const sType = section.type as SectionType;
+      if (DEFAULT_SECTION_ORDER.includes(sType)) {
+        map[sType] = section.variant as VariantNumber;
+      }
+    });
+    return map;
+  }, [storeSections]);
+
   // Get the list of sections that have content
   const sectionsWithContent = useMemo(() => {
     return sectionOrder.filter((section) => {
@@ -83,12 +100,12 @@ export function SitePreview({
   useEffect(() => {
     const preloadSections = async () => {
       for (const section of sectionsWithContent) {
-        const variant = variantOverrides[section] || defaultVariant;
+        const variant = storeVariantMap[section] || variantOverrides[section] || defaultVariant;
         await preloadSectionComponent(section, variant);
       }
     };
     preloadSections();
-  }, [sectionsWithContent, variantOverrides, defaultVariant]);
+  }, [sectionsWithContent, storeVariantMap, variantOverrides, defaultVariant]);
 
   // Scroll to active section
   useEffect(() => {
@@ -118,7 +135,8 @@ export function SitePreview({
         const sectionContent = content[sectionType];
         if (!sectionContent) return null;
 
-        const variant = variantOverrides[sectionType] || defaultVariant;
+        // Use store variant first, then variantOverrides, then default
+        const variant = storeVariantMap[sectionType] || variantOverrides[sectionType] || defaultVariant;
         const sectionId = `section-${sectionType}`;
 
         return (
