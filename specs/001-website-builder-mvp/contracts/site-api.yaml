@@ -1,0 +1,519 @@
+openapi: 3.1.0
+info:
+  title: Site API
+  description: API for managing website configurations, sections, and exports
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: Application API routes
+
+paths:
+  /site:
+    post:
+      operationId: createSite
+      summary: Create a new site
+      description: Creates a site configuration from a conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteRequest'
+      responses:
+        '201':
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /site/{siteId}:
+    get:
+      operationId: getSite
+      summary: Get site configuration
+      description: Retrieves full site configuration including all sections
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      responses:
+        '200':
+          description: Site configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateSite
+      summary: Update site configuration
+      description: Updates site status, theme, or section order
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteRequest'
+      responses:
+        '200':
+          description: Site updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /site/{siteId}/section:
+    post:
+      operationId: addSection
+      summary: Add a section to the site
+      description: Adds a new section with content and selected variant
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddSectionRequest'
+      responses:
+        '201':
+          description: Section added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SectionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /site/{siteId}/section/{sectionId}:
+    patch:
+      operationId: updateSection
+      summary: Update a section
+      description: Updates section content or variant selection
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+        - $ref: '#/components/parameters/SectionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSectionRequest'
+      responses:
+        '200':
+          description: Section updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SectionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteSection
+      summary: Remove a section
+      description: Removes a section from the site
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+        - $ref: '#/components/parameters/SectionId'
+      responses:
+        '204':
+          description: Section deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /site/{siteId}/variant:
+    post:
+      operationId: selectVariant
+      summary: AI variant selection
+      description: |
+        Uses AI to select the best variant for a section based on brand personality.
+        Returns selection with confidence score and reasoning.
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VariantSelectionRequest'
+      responses:
+        '200':
+          description: Variant selection result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantSelectionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /export:
+    post:
+      operationId: exportSite
+      summary: Export site as deployable project
+      description: |
+        Generates a complete Next.js project with selected components and user content.
+        Returns download URL and optional GitHub/Vercel deployment links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Export completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          description: Payment required for export
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  parameters:
+    SiteId:
+      name: siteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    SectionId:
+      name: sectionId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    SiteStatus:
+      type: string
+      enum: [building, preview, awaiting_launch, launched]
+
+    SectionType:
+      type: string
+      enum:
+        - hero
+        - services
+        - menu
+        - about
+        - process
+        - portfolio
+        - testimonials
+        - location
+        - gallery
+        - contact
+
+    ThemeConfig:
+      type: object
+      required: [colors, fonts, borderRadius]
+      properties:
+        colors:
+          type: object
+          required: [primary, secondary, accent, background, foreground]
+          properties:
+            primary:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            secondary:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            accent:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            background:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+            foreground:
+              type: string
+              pattern: '^#[0-9A-Fa-f]{6}$'
+        fonts:
+          type: object
+          required: [heading, body]
+          properties:
+            heading:
+              type: string
+            body:
+              type: string
+        borderRadius:
+          type: string
+          enum: [none, sm, md, lg, full]
+
+    SectionConfig:
+      type: object
+      required: [id, type, selectedVariant, content, aiSelected]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/SectionType'
+        selectedVariant:
+          type: integer
+          minimum: 1
+          maximum: 5
+        content:
+          type: object
+          description: Section-specific content (HeroContent, ServicesContent, etc.)
+        aiSelected:
+          type: boolean
+        aiReasoning:
+          type: string
+
+    SiteConfig:
+      type: object
+      required: [businessProfile, sections, theme, sectionOrder]
+      properties:
+        businessProfile:
+          $ref: '#/components/schemas/BusinessProfile'
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionConfig'
+        theme:
+          $ref: '#/components/schemas/ThemeConfig'
+        sectionOrder:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionType'
+
+    BusinessProfile:
+      $ref: 'conversation-api.yaml#/components/schemas/BusinessProfile'
+
+    CreateSiteRequest:
+      type: object
+      required: [conversationId]
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+
+    SiteResponse:
+      type: object
+      required: [id, conversationId, config, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        config:
+          $ref: '#/components/schemas/SiteConfig'
+        status:
+          $ref: '#/components/schemas/SiteStatus'
+        previewUrl:
+          type: string
+          format: uri
+        exportUrl:
+          type: string
+          format: uri
+        launchPreferences:
+          $ref: '#/components/schemas/LaunchPreferences'
+        createdAt:
+          type: string
+          format: date-time
+        launchedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateSiteRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/SiteStatus'
+        theme:
+          $ref: '#/components/schemas/ThemeConfig'
+        sectionOrder:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionType'
+
+    AddSectionRequest:
+      type: object
+      required: [type, content, selectedVariant]
+      properties:
+        type:
+          $ref: '#/components/schemas/SectionType'
+        content:
+          type: object
+        selectedVariant:
+          type: integer
+          minimum: 1
+          maximum: 5
+        aiSelected:
+          type: boolean
+          default: true
+        aiReasoning:
+          type: string
+
+    SectionResponse:
+      type: object
+      required: [id, type, selectedVariant, content]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/SectionType'
+        selectedVariant:
+          type: integer
+        content:
+          type: object
+        aiSelected:
+          type: boolean
+        aiReasoning:
+          type: string
+
+    UpdateSectionRequest:
+      type: object
+      properties:
+        content:
+          type: object
+        selectedVariant:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    VariantSelectionRequest:
+      type: object
+      required: [sectionType]
+      properties:
+        sectionType:
+          $ref: '#/components/schemas/SectionType'
+
+    VariantSelectionResponse:
+      type: object
+      required: [variant, confidence, reasoning]
+      properties:
+        variant:
+          type: integer
+          minimum: 1
+          maximum: 5
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        reasoning:
+          type: string
+        alternatives:
+          type: array
+          items:
+            type: object
+            properties:
+              variant:
+                type: integer
+              matchScore:
+                type: number
+
+    LaunchPreferences:
+      type: object
+      required: [email, imagePreference, domainPreference, timeline]
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        imagePreference:
+          type: string
+          enum: [placeholders, provide_own, need_photography]
+        domainPreference:
+          type: string
+          enum: [buy_new, use_existing, hosted_subdomain]
+        existingDomain:
+          type: string
+        timeline:
+          type: string
+          enum: [asap, this_week, this_month, no_rush]
+        notes:
+          type: string
+          maxLength: 1000
+
+    ExportRequest:
+      type: object
+      required: [siteId]
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        deployToVercel:
+          type: boolean
+          default: false
+        pushToGitHub:
+          type: boolean
+          default: false
+
+    ExportResponse:
+      type: object
+      required: [downloadUrl, generationTime]
+      properties:
+        downloadUrl:
+          type: string
+          format: uri
+        githubRepoUrl:
+          type: string
+          format: uri
+        vercelDeployUrl:
+          type: string
+          format: uri
+        generationTime:
+          type: number
+          description: Generation time in milliseconds
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
