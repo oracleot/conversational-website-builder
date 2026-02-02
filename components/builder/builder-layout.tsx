@@ -6,7 +6,7 @@
  * Responsive: Full-width chat on mobile, split on desktop
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChatInterface } from '@/components/chat/chat-interface';
 import { ProgressIndicator } from '@/components/chat/progress-indicator';
 import { SitePreview, type SiteContent } from '@/components/sections/preview';
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useConversationStore } from '@/lib/stores/conversation-store';
 import { useSiteStore } from '@/lib/stores/site-store';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import type { Message, ConversationStep, IndustryType, BusinessProfile, SectionType } from '@/lib/db/types';
 
 // Mock data for testing preview (enable with ?mockPreview=true in URL)
@@ -99,15 +99,18 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     clearScrollTarget,
   } = useSiteStore();
 
-  // Check for mock preview mode on mount
+  // Check for mock preview mode on mount (deferred to avoid sync setState in effect)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('mockPreview') === 'true') {
-        setMockContent({
-          hero: MOCK_HERO_CONTENT,
-          services: MOCK_SERVICES_CONTENT,
-          about: MOCK_ABOUT_CONTENT,
+        // Defer setState to next microtask to avoid cascading renders
+        queueMicrotask(() => {
+          setMockContent({
+            hero: MOCK_HERO_CONTENT,
+            services: MOCK_SERVICES_CONTENT,
+            about: MOCK_ABOUT_CONTENT,
+          });
         });
       }
     }
@@ -141,8 +144,8 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Get variant based on brand personality
-  const getVariantForPersonality = (): 1 | 2 | 3 | 4 | 5 => {
+  // Get variant based on brand personality - memoized to avoid stale closure
+  const getVariantForPersonality = useCallback((): 1 | 2 | 3 | 4 | 5 => {
     // Check extracted business profile first, then initialData
     const extractedProfile = extractedContent.business_profile as BusinessProfile | undefined;
     const businessProfile = extractedProfile || initialData.businessProfile;
@@ -151,7 +154,7 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     // Map first brand personality trait to variant
     const personality = businessProfile.brandPersonality[0].toLowerCase();
     return (PERSONALITY_VARIANT_MAP[personality] || 1) as 1 | 2 | 3 | 4 | 5;
-  };
+  }, [extractedContent.business_profile, initialData.businessProfile]);
 
   // Sync extracted content to site sections
   useEffect(() => {
@@ -170,7 +173,7 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
         });
       }
     });
-  }, [extractedContent, addSection]);
+  }, [extractedContent, addSection, getVariantForPersonality]);
 
   const handleStepChange = (step: ConversationStep) => {
     setCurrentStep(step);
@@ -399,6 +402,7 @@ function PreviewPanel({ content, previewMode, scrollToSection, onScrollComplete 
           personality="professional"
           activeSectionId={scrollToSection ?? undefined}
           className="min-h-full"
+          isEditable={true}
         />
       </div>
     </div>

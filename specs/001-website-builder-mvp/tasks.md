@@ -199,22 +199,22 @@
 
 ### Variant Selection Logic for US3
 
-- [ ] T096 [US3] Implement variant selection algorithm in lib/chat/variant-selector.ts
-- [ ] T097 [US3] Create variant selection prompt in lib/chat/prompts.ts
-- [ ] T098 [US3] Implement POST /api/site/[id]/variant endpoint in app/api/site/[siteId]/variant/route.ts
+- [X] T096 [US3] Implement variant selection algorithm in lib/chat/variant-selector.ts
+- [X] T097 [US3] Create variant selection prompt in lib/chat/prompts.ts
+- [X] T098 [US3] Implement POST /api/site/[id]/variant endpoint in app/api/site/[siteId]/variant/route.ts
 
 ### Variant Override UI for US3
 
-- [ ] T099 [US3] Create variant-carousel component in components/preview/variant-carousel.tsx
-- [ ] T100 [US3] Add "See other options" trigger to section-wrapper in components/preview/section-wrapper.tsx
-- [ ] T101 [US3] Display AI reasoning badge in section-wrapper in components/preview/section-wrapper.tsx
-- [ ] T102 [US3] Implement variant switch with instant preview update in components/preview/variant-carousel.tsx
-- [ ] T103 [US3] Record variant override to component_usage table via existing query from T032
+- [X] T099 [US3] Create variant-carousel component in components/preview/variant-carousel.tsx
+- [X] T100 [US3] Add "See other options" trigger to section-wrapper in components/preview/section-wrapper.tsx
+- [X] T101 [US3] Display AI reasoning badge in section-wrapper in components/preview/section-wrapper.tsx
+- [X] T102 [US3] Implement variant switch with instant preview update in components/preview/variant-carousel.tsx
+- [X] T103 [US3] Record variant override to component_usage table via existing query from T032
 
 ### Tests for US3 (RED-GREEN-REFACTOR)
 
-- [ ] T103a [P] [US3] Write unit tests for variant-selector algorithm in tests/unit/variant-selector.test.ts
-- [ ] T103b [US3] Write integration tests for variant switching in tests/integration/variant-api.test.ts
+- [X] T103a [P] [US3] Write unit tests for variant-selector algorithm in tests/unit/variant-selector.test.ts
+- [X] T103b [US3] Write integration tests for variant switching in tests/integration/variant-api.test.ts
 
 **Checkpoint**: User Story 3 complete - AI selects variants with reasoning, users can override easily
 
@@ -355,8 +355,8 @@
 
 ### Landing Page
 
-- [ ] T144 [P] Create landing page with CTA in app/page.tsx
-- [ ] T145 [P] Create "Start Building" flow in app/page.tsx
+- [X] T144 [P] Create landing page with CTA in app/page.tsx
+- [X] T145 [P] Create "Start Building" flow in app/page.tsx
 
 ### Error Handling
 

@@ -467,3 +467,122 @@ export function getSectionSchema(sectionType: SectionType): object {
 
   return schemas[sectionType] || schemas.hero;
 }
+
+// ============================================================================
+// VARIANT SELECTION PROMPTS
+// ============================================================================
+
+/**
+ * System prompt for AI-powered variant selection
+ * Used when more sophisticated selection logic is needed beyond simple trait matching
+ */
+export const VARIANT_SELECTION_SYSTEM_PROMPT = `You are a design expert that helps match website section variants to brand personalities.
+
+Each section type has 5 design variants with distinct personalities:
+1. Professional - Clean, corporate design with strong credibility signals. Best for: consulting, legal, b2b services
+2. Modern - Minimalist design with whitespace and sleek aesthetics. Best for: tech, startups, digital agencies
+3. Bold - Eye-catching creative design with strong visual impact. Best for: creative agencies, entertainment, fashion
+4. Elegant - High-end design with refined typography and premium feel. Best for: luxury brands, boutiques
+5. Friendly - Warm, inviting design that feels personal and accessible. Best for: local businesses, community
+
+Your job is to analyze a business profile and recommend the best variant for each section, explaining your reasoning.`;
+
+/**
+ * Generate a prompt to select the best variant for a section based on business profile
+ */
+export function getVariantSelectionPrompt(
+  sectionType: SectionType,
+  businessProfile: {
+    name: string;
+    industry: 'service' | 'local';
+    businessType?: string;
+    brandPersonality?: string[];
+    description?: string;
+  }
+): string {
+  const traits = businessProfile.brandPersonality?.join(', ') || 'not specified';
+  
+  return `Analyze this business and select the best design variant (1-5) for their ${sectionType} section.
+
+Business Profile:
+- Name: ${businessProfile.name}
+- Industry: ${businessProfile.industry}
+- Type: ${businessProfile.businessType || 'General business'}
+- Brand Personality: ${traits}
+- Description: ${businessProfile.description || 'Not provided'}
+
+Variant Options:
+1. Professional - Corporate, trustworthy, formal
+2. Modern - Minimal, clean, tech-forward, contemporary  
+3. Bold - Creative, artistic, vibrant, expressive
+4. Elegant - Luxury, sophisticated, premium, refined
+5. Friendly - Approachable, casual, warm, welcoming
+
+Return a JSON object with this exact structure:
+{
+  "selectedVariant": <number 1-5>,
+  "confidence": <number 0-100>,
+  "reasoning": "<one sentence explaining why this variant matches their brand>",
+  "alternatives": [
+    {"variant": <number>, "reason": "<why this could also work>"}
+  ]
+}
+
+Consider:
+- Match variant personality to stated brand traits
+- Consider industry standards (e.g., legal firms typically prefer professional)
+- Think about their target audience based on business description
+- Provide 1-2 good alternatives`;
+}
+
+/**
+ * Generate a prompt to select variants for multiple sections at once
+ */
+export function getBatchVariantSelectionPrompt(
+  sections: SectionType[],
+  businessProfile: {
+    name: string;
+    industry: 'service' | 'local';
+    businessType?: string;
+    brandPersonality?: string[];
+    description?: string;
+  }
+): string {
+  const traits = businessProfile.brandPersonality?.join(', ') || 'not specified';
+  
+  return `Analyze this business and select the best design variant (1-5) for each section to create a cohesive website.
+
+Business Profile:
+- Name: ${businessProfile.name}
+- Industry: ${businessProfile.industry}
+- Type: ${businessProfile.businessType || 'General business'}
+- Brand Personality: ${traits}
+- Description: ${businessProfile.description || 'Not provided'}
+
+Sections to design: ${sections.join(', ')}
+
+Variant Options:
+1. Professional - Corporate, trustworthy, formal
+2. Modern - Minimal, clean, tech-forward
+3. Bold - Creative, artistic, vibrant
+4. Elegant - Luxury, sophisticated, premium
+5. Friendly - Approachable, casual, warm
+
+Return a JSON object with this exact structure:
+{
+  "selections": [
+    {
+      "section": "<section name>",
+      "variant": <number 1-5>,
+      "reasoning": "<brief explanation>"
+    }
+  ],
+  "overallConsistency": "<how these choices work together>",
+  "dominantStyle": "<which variant style dominates and why>"
+}
+
+Important:
+- Maintain visual consistency across sections (typically use same variant or complementary ones)
+- Match the dominant variant to their strongest brand trait
+- Consider the flow from hero through to contact`;
+}

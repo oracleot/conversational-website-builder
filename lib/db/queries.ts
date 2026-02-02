@@ -341,6 +341,135 @@ export async function getSiteComponentUsage(
   return data;
 }
 
+// ========== IN-MEMORY COMPONENT USAGE TRACKING ==========
+
+/**
+ * In-memory component usage tracking for demo purposes
+ * In production, this would use the Supabase trackComponentUsage function
+ */
+const componentUsageLog = new Map<string, Array<{
+  id: string;
+  siteId: string;
+  sectionType: string;
+  variantNumber: number;
+  isOverride: boolean;
+  selectedAt: string;
+}>>();
+
+export interface TrackComponentUsageInMemoryParams {
+  siteId: string;
+  sectionType: string;
+  variantNumber: number;
+  isOverride: boolean;
+}
+
+/**
+ * Track component variant usage (in-memory version)
+ * Records when users select or override variant selections
+ */
+export async function trackComponentUsageInMemory(
+  params: TrackComponentUsageInMemoryParams
+): Promise<{
+  success: boolean;
+  id?: string;
+  error?: string;
+}> {
+  try {
+    const id = `usage_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const usage = {
+      id,
+      siteId: params.siteId,
+      sectionType: params.sectionType,
+      variantNumber: params.variantNumber,
+      isOverride: params.isOverride,
+      selectedAt: new Date().toISOString(),
+    };
+
+    const existing = componentUsageLog.get(params.siteId) || [];
+    existing.push(usage);
+    componentUsageLog.set(params.siteId, existing);
+
+    return { success: true, id };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to track usage',
+    };
+  }
+}
+
+/**
+ * Get component usage statistics for a site (in-memory version)
+ */
+export async function getComponentUsageInMemory(siteId: string): Promise<{
+  success: boolean;
+  usage?: Array<{
+    sectionType: string;
+    variantNumber: number;
+    isOverride: boolean;
+    selectedAt: string;
+  }>;
+  error?: string;
+}> {
+  try {
+    const usage = componentUsageLog.get(siteId) || [];
+    return {
+      success: true,
+      usage: usage.map(u => ({
+        sectionType: u.sectionType,
+        variantNumber: u.variantNumber,
+        isOverride: u.isOverride,
+        selectedAt: u.selectedAt,
+      })),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get usage',
+    };
+  }
+}
+
+/**
+ * Get component override statistics across all sites (in-memory version)
+ */
+export function getOverrideStats(): {
+  totalOverrides: number;
+  overridesBySection: Record<string, number>;
+  overridesByVariant: Record<number, number>;
+  mostOverriddenSection: string | null;
+} {
+  const stats = {
+    totalOverrides: 0,
+    overridesBySection: {} as Record<string, number>,
+    overridesByVariant: {} as Record<number, number>,
+    mostOverriddenSection: null as string | null,
+  };
+
+  for (const usages of componentUsageLog.values()) {
+    for (const usage of usages) {
+      if (usage.isOverride) {
+        stats.totalOverrides++;
+        stats.overridesBySection[usage.sectionType] = 
+          (stats.overridesBySection[usage.sectionType] || 0) + 1;
+        stats.overridesByVariant[usage.variantNumber] = 
+          (stats.overridesByVariant[usage.variantNumber] || 0) + 1;
+      }
+    }
+  }
+
+  // Find most overridden section
+  let maxOverrides = 0;
+  for (const [section, count] of Object.entries(stats.overridesBySection)) {
+    if (count > maxOverrides) {
+      maxOverrides = count;
+      stats.mostOverriddenSection = section;
+    }
+  }
+
+  return stats;
+}
+
 // ========== HELPER QUERIES ==========
 
 /**

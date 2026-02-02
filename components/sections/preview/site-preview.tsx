@@ -6,7 +6,7 @@
  */
 
 import { useMemo, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ComponentLoader, preloadSectionComponent } from './component-loader';
 import { SectionWrapper } from './section-wrapper';
 import { PERSONALITY_VARIANT_MAP, type SectionType, type VariantNumber } from '../index';
@@ -49,6 +49,9 @@ interface SitePreviewProps {
   sectionOrder?: SectionType[];
   variantOverrides?: Partial<Record<SectionType, VariantNumber>>;
   className?: string;
+  isEditable?: boolean;
+  siteId?: string | null;
+  onVariantChange?: (sectionType: SectionType, variant: number) => void;
 }
 
 /**
@@ -61,6 +64,9 @@ export function SitePreview({
   sectionOrder = DEFAULT_SECTION_ORDER,
   variantOverrides = {},
   className,
+  isEditable = false,
+  siteId = null,
+  onVariantChange,
 }: SitePreviewProps) {
   // Determine variant based on personality
   const defaultVariant = (PERSONALITY_VARIANT_MAP[personality] || 1) as VariantNumber;
@@ -108,20 +114,32 @@ export function SitePreview({
 
   return (
     <div className={className}>
-      {sectionsWithContent.map((sectionType) => {
+      {sectionsWithContent.map((sectionType, index) => {
         const sectionContent = content[sectionType];
         if (!sectionContent) return null;
 
         const variant = variantOverrides[sectionType] || defaultVariant;
+        const sectionId = `section-${sectionType}`;
 
         return (
-          <div key={sectionType} id={sectionType}>
+          <SectionWrapper
+            key={sectionType}
+            id={sectionId}
+            sectionType={sectionType}
+            siteId={siteId}
+            currentVariant={variant}
+            isEditable={isEditable}
+            isActive={activeSectionId === sectionType}
+            animationVariant="slide-up"
+            delay={index * 0.1}
+            onVariantChange={(newVariant) => onVariantChange?.(sectionType, newVariant)}
+          >
             <ComponentLoader
               sectionType={sectionType}
               variant={variant}
               content={sectionContent as never}
             />
-          </div>
+          </SectionWrapper>
         );
       })}
     </div>

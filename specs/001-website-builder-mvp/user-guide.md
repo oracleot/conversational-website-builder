@@ -1,14 +1,20 @@
-# User Guide: AI-Powered Website Builder - Guided Conversation
+# User Guide: AI-Powered Website Builder
 
-**Feature**: Guided Conversation for Business Website
-**Version**: 1.0 (Phase 3)
+**Feature**: Conversational Website Builder with AI Variant Selection
+**Version**: 1.2 (Phase 5)
 **Last Updated**: 2026-02-02
 
 ---
 
 ## Overview
 
-The Website Builder guides you through creating your business website via a friendly chat conversation. Instead of filling out complex forms, simply answer questions about your business in natural language, and the AI will help structure your content for a professional website.
+The Website Builder guides you through creating your business website via a friendly chat conversation. As you answer questions about your business, the AI automatically selects the best design variants based on your brand personality, and you can browse alternatives to customize your site's look and feel.
+
+**Key Features:**
+- 🗣️ Natural language conversation (no forms!)
+- 👀 Live preview updates as you chat
+- 🤖 AI-powered design selection based on brand personality
+- 🎨 Browse and switch between 5 design variants per section
 
 ---
 
@@ -145,17 +151,93 @@ The preview updates after completing the Business Info step (Step 2). Keep answe
 |----------|--------|
 | `Enter` | Send message (when text is entered) |
 | `Shift + Enter` | New line in message |
+| `← →` | Navigate variants in carousel |
+| `Esc` | Close variant carousel |
+
+---
+
+## Live Preview Features (Phase 4)
+
+### Real-Time Updates
+As you complete each section in the conversation, the live preview updates within seconds. Watch your website take shape as you chat!
+
+### Responsive Preview
+Use the device toggle buttons in the header to preview your site on:
+- 💻 **Desktop** - Full width
+- 📱 **Tablet** - 768px width
+- 📲 **Mobile** - 375px width
+
+### Smooth Animations
+Sections animate into view with smooth transitions. New sections scroll into focus automatically.
 
 ---
 
 ## What's Next
 
-After completing the guided conversation (Phase 3), you'll unlock:
+After completing the guided conversation, you'll unlock:
 
-- **Live Preview** (Phase 4): See your website update in real-time
-- **Design Variants** (Phase 5): AI selects the best design, with options to switch
 - **Export** (Phase 6): Download your complete website as a deployable project
 - **Launch** (Phase 7): Request human-assisted launch with domain setup
+- **Local Business Support** (Phase 8): Specialized sections for restaurants, salons, etc.
+
+---
+
+## AI-Powered Design Selection (Phase 5)
+
+### How It Works
+
+The AI analyzes your **brand personality** to automatically select the best design variant for each section. There are 5 variants per section:
+
+| Variant | Style | Best For |
+|---------|-------|----------|
+| 1 | Professional | Corporate, consulting, law firms |
+| 2 | Modern | Tech startups, agencies, SaaS |
+| 3 | Bold | Creative agencies, artists, designers |
+| 4 | Elegant | Luxury brands, high-end services, boutiques |
+| 5 | Friendly | Local businesses, healthcare, education |
+
+### Viewing AI Recommendations
+
+When you hover over any section in the preview, you'll see:
+- **AI Badge**: Shows why the AI selected this variant based on your brand
+- **"See other options" Button**: Opens the variant carousel
+
+### Switching Variants
+
+1. Hover over any section in the preview
+2. Click **"See other options"**
+3. Browse all 5 variants with match scores
+4. Click on a variant to switch instantly
+5. Use **← →** arrow keys to navigate
+6. Press **Esc** to close the carousel
+
+### Understanding Match Scores
+
+Each variant shows a **match percentage** based on your brand personality:
+- **70%+** (Green): Excellent match
+- **40-69%** (Yellow): Good match
+- **<40%** (Gray): May work but less aligned
+
+### AI Reasoning
+
+The AI explains its selection, for example:
+> "Selected variant 4 (85% match) because your 'elegant, sophisticated' brand personality aligns with its premium and refined design style."
+
+---
+
+## Tips for Better AI Selections
+
+### Describe Your Brand Personality Clearly
+
+Use specific adjectives that match our variant styles:
+
+| If You Want... | Describe Your Brand As |
+|----------------|------------------------|
+| Classic, trustworthy | "professional, corporate, trustworthy" |
+| Cutting-edge, minimal | "modern, minimal, tech-forward" |
+| Creative, attention-grabbing | "bold, creative, artistic" |
+| Premium, sophisticated | "elegant, luxury, refined" |
+| Warm, welcoming | "friendly, approachable, warm" |
 
 ---
 
@@ -163,4 +245,6 @@ After completing the guided conversation (Phase 3), you'll unlock:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2 | 2026-02-02 | Phase 5: AI variant selection with override capability |
+| 1.1 | 2026-02-02 | Phase 4: Live preview with 35 section components |
 | 1.0 | 2026-02-02 | Initial release with 10-step guided conversation |
