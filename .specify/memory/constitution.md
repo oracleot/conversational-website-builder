@@ -1,13 +1,10 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 0.0.0 → 1.0.0 (MAJOR - Initial constitution)
-Modified principles: N/A (initial creation)
+Version change: 1.0.0 → 1.0.1 (PATCH - Development workflow clarifications)
+Modified principles: None (clarifications added to Technology Standards section)
 Added sections:
-  - Core Principles (4 principles)
-  - Technology Standards
-  - Quality Gates
-  - Governance
+  - Development Workflow subsection (UI/design skills requirement, shadcn/ui check requirement)
 Removed sections: None
 Templates status:
   - .specify/templates/plan-template.md: ✅ Compatible (Constitution Check section exists)
@@ -87,6 +84,10 @@ All operations MUST meet defined latency and cost budgets to ensure scalability 
 - Industry-specific: `{industry}-{section}-{variant}.tsx` (e.g., `service-hero-1.tsx`)
 - Shared/reusable: `shared-{section}-{variant}.tsx` (e.g., `shared-testimonials-3.tsx`)
 
+**Development Workflow:**
+- All UI/design work MUST utilize `frontend-design` and `vercel-react-best-practices` skills for production-grade quality and optimal performance patterns
+- Before creating new components, MUST check shadcn/ui component library for existing implementations that can be reused or adapted
+
 ## Quality Gates
 
 **Pre-Merge Requirements:**
@@ -117,4 +118,4 @@ This constitution supersedes all other development practices for this project. A
 
 **Compliance:** Constitution checks are integrated into the plan template. Violations MUST be justified in the Complexity Tracking section with rejected alternatives documented.
 
-**Version**: 1.0.0 | **Ratified**: 2026-02-02 | **Last Amended**: 2026-02-02
+**Version**: 1.0.1 | **Ratified**: 2026-02-02 | **Last Amended**: 2026-02-02
