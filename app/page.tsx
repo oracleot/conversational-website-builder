@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -51,7 +50,6 @@ export default function Home() {
         <div className="hidden items-center gap-8 sm:flex">
           <a href="#features" className="text-sm text-zinc-400 transition-colors hover:text-white">Features</a>
           <a href="#how-it-works" className="text-sm text-zinc-400 transition-colors hover:text-white">How it works</a>
-          <Link href="/login" className="text-sm text-zinc-400 transition-colors hover:text-white">Sign in</Link>
         </div>
       </nav>
 

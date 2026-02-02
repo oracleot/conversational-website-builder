@@ -33,6 +33,7 @@ IMPORTANT RULES:
 - Be encouraging and acknowledge what they share
 - If they seem stuck, provide helpful examples
 - Keep responses concise but warm
+- When asking for information, remind users they can click the "Suggest an answer" button if they need inspiration or aren't sure what to say
 
 Current conversation context will be provided. Your job is to guide them to the next piece of information needed.`;
 
@@ -169,6 +170,114 @@ Thank them for their time and encourage them to explore their new website!`
   };
 
   return prompts[step] || prompts.business_profile;
+}
+
+// ============================================================================
+// SUGGESTION PROMPTS FOR HELPING STUCK USERS
+// ============================================================================
+
+/**
+ * Generate a suggestion prompt for the current step when users need help
+ */
+export function getSuggestionPrompt(step: ConversationStep, lastAIQuestion?: string): string {
+  const suggestions: Record<ConversationStep, string> = {
+    industry_selection: `Generate a brief, realistic example of how someone might describe their business type.
+Include the business type (service or local) naturally in the response.
+Keep it to 1-2 sentences. Example output: "I run a digital marketing agency that helps small businesses grow online."`,
+
+    business_profile: `Generate a realistic business profile example with:
+- A creative business name
+- A catchy tagline (under 10 words)
+- A brief description of what they do
+- 2-3 brand personality words
+- A contact email
+
+Format it naturally as if someone is describing their business. Keep it concise and realistic.`,
+
+    hero: `Generate a compelling hero section example with:
+- A powerful headline (under 10 words) that captures value
+- A supporting subheadline (1-2 sentences)
+- A call-to-action button text
+
+Make it inspiring and conversion-focused. Present it naturally as if describing what they want visitors to see.`,
+
+    services: `Generate 3-4 realistic service offerings with:
+- Service names
+- Brief 1-sentence descriptions for each
+- Key benefits
+
+Present it as a natural description of what the business offers.`,
+
+    menu: `Generate a sample menu for a local business with:
+- 2-3 categories
+- 3-4 items per category with prices
+- Brief descriptions
+
+Make it realistic for a restaurant, cafe, or food service business.`,
+
+    about: `Generate a compelling about section with:
+- A brief origin story (2-3 sentences)
+- What makes the business unique
+- Years in business or clients served
+- Core values or mission
+
+Present it as a natural story about the business.`,
+
+    process: `Generate a clear 4-step process for working with clients:
+- Step titles
+- Brief descriptions of what happens at each step
+
+Make it professional and reassuring for potential customers.`,
+
+    portfolio: `Generate 3-4 sample portfolio items or case studies with:
+- Project/client names
+- Brief descriptions of the work done
+- Results achieved (if applicable)
+
+Make them realistic and impressive but not over-the-top.`,
+
+    testimonials: `Generate 2-3 realistic customer testimonials with:
+- Quote text (authentic-sounding)
+- Customer name
+- Their role or company
+
+Make them specific and believable, not generic praise.`,
+
+    location: `Generate sample location information with:
+- A realistic business address
+- Business hours (weekdays and weekends)
+- Phone number
+- Any special notes about parking or access
+
+Make it realistic for a local business.`,
+
+    gallery: `Generate descriptions for 4-6 photos that would showcase the business:
+- What each photo shows
+- Why it would appeal to customers
+
+Present it as planning what photos to include.`,
+
+    contact: `Generate contact section preferences including:
+- Preferred contact methods
+- Form fields needed
+- Social media profiles
+- Any specific questions to ask visitors
+
+Present it naturally as describing how customers should reach out.`,
+
+    review: `Generate a brief confirmation that everything looks good, or mention one small change they might want to make.`,
+
+    complete: `Congratulate the user on completing their website content!`
+  };
+
+  const basePrompt = `You are helping a user who is stuck and needs an example answer for their website builder.
+Generate a realistic, helpful example they can use or modify. Be creative but realistic.
+DO NOT explain what you're doing - just provide the example content directly.
+Keep the response concise and natural.
+${lastAIQuestion ? `\nIMPORTANT: The user is trying to answer this specific question from the AI assistant:\n"${lastAIQuestion.slice(0, 800)}"\n\nYour suggestion should DIRECTLY answer this question.\n` : ''}
+`;
+
+  return basePrompt + (suggestions[step] || 'Generate a helpful example response for this step.');
 }
 
 // ============================================================================
