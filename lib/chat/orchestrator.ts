@@ -204,12 +204,50 @@ ${stepPrompt}`;
   }
 
   /**
-   * Determine the next step based on user response
+   * Detect if AI response signals readiness to move on
    */
-  async determineNextStep(userMessage: string): Promise<StepTransitionResult> {
+  private detectMoveOnSignal(aiResponse: string): boolean {
+    const moveOnPhrases = [
+      'we can move on',
+      "let's move on",
+      'move on to',
+      "let's proceed",
+      'we can proceed',
+      'ready to move',
+      'have everything i need',
+      'have what i need',
+      'that covers',
+      "let's continue to",
+      'move to the next',
+      'proceed to the next',
+      'on to the next',
+      'sounds great! let me',
+      'perfect! now',
+      "let's start building",
+      "let's begin with",
+      "now that we have",
+      "we're ready to",
+      "ready to start",
+      "captured your",
+      "beautifully outlined",
+      "with your business profile",
+      "have all the info"
+    ];
+    
+    const lowerResponse = aiResponse.toLowerCase();
+    return moveOnPhrases.some(phrase => lowerResponse.includes(phrase));
+  }
+
+  /**
+   * Determine the next step based on user response and AI response
+   */
+  async determineNextStep(userMessage: string, aiResponse?: string): Promise<StepTransitionResult> {
     const currentStep = this.context.currentStep;
     const stepFlow = getStepFlow(this.context.industry);
     const currentIndex = stepFlow.indexOf(currentStep);
+    
+    // Check if AI response signals we should move on
+    const aiSignalsMoveOn = aiResponse ? this.detectMoveOnSignal(aiResponse) : false;
     
     // Handle industry selection separately
     if (currentStep === 'industry_selection') {
@@ -226,6 +264,14 @@ ${stepPrompt}`;
 
     // Handle business profile - check if complete
     if (currentStep === 'business_profile') {
+      // If AI signals move on, extract immediately
+      if (aiSignalsMoveOn) {
+        return {
+          nextStep: 'hero',
+          shouldExtract: true,
+          extractionType: 'business_profile'
+        };
+      }
       const hasEnoughInfo = await this.checkBusinessProfileComplete(userMessage);
       if (hasEnoughInfo) {
         return {
@@ -240,6 +286,14 @@ ${stepPrompt}`;
     // For section steps, determine if ready to move on
     const sectionType = getSectionTypeForStep(currentStep);
     if (sectionType) {
+      // If AI signals move on, extract immediately
+      if (aiSignalsMoveOn && currentIndex < stepFlow.length - 1) {
+        return {
+          nextStep: stepFlow[currentIndex + 1],
+          shouldExtract: true,
+          extractionType: sectionType
+        };
+      }
       const isComplete = await this.checkSectionComplete(userMessage, sectionType);
       if (isComplete && currentIndex < stepFlow.length - 1) {
         return {

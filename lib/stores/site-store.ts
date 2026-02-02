@@ -122,17 +122,22 @@ const initialState = {
 
 export const useSiteStore = create<SiteState>()(
   persist(
-    (set, _get) => ({
+    (set, get) => ({
       ...initialState,
 
-      initializeSite: (data) => set({
-        id: data.id,
-        conversationId: data.conversationId,
-        name: data.name ?? 'Untitled Site',
-        sections: data.sections ?? [],
-        theme: data.theme ?? defaultTheme,
-        error: null,
-      }),
+      initializeSite: (data) => {
+        const state = get();
+        // If conversationId changed, reset sections to start fresh
+        const resetSections = state.conversationId !== data.conversationId;
+        set({
+          id: data.id,
+          conversationId: data.conversationId,
+          name: data.name ?? 'Untitled Site',
+          sections: resetSections ? (data.sections ?? []) : (data.sections ?? state.sections),
+          theme: data.theme ?? defaultTheme,
+          error: null,
+        });
+      },
 
       setSiteId: (id) => set({ id }),
       setName: (name) => set({ name }),

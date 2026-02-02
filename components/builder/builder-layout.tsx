@@ -10,12 +10,49 @@ import { useState, useEffect, useMemo } from 'react';
 import { ChatInterface } from '@/components/chat/chat-interface';
 import { ProgressIndicator } from '@/components/chat/progress-indicator';
 import { SitePreview, type SiteContent } from '@/components/sections/preview';
+import { PERSONALITY_VARIANT_MAP } from '@/components/sections';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useConversationStore } from '@/lib/stores/conversation-store';
 import { useSiteStore } from '@/lib/stores/site-store';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Message, ConversationStep, IndustryType, BusinessProfile, SectionType } from '@/lib/db/types';
+
+// Mock data for testing preview (enable with ?mockPreview=true in URL)
+const MOCK_HERO_CONTENT = {
+  headline: "Transform Your Business with Expert Solutions",
+  subheadline: "We help companies grow through strategic consulting and innovative technology solutions that drive real results.",
+  cta: {
+    primary: "Get Started",
+    primaryAction: "#contact",
+    secondary: "Learn More",
+    secondaryAction: "#about",
+  },
+  backgroundStyle: 'gradient' as const,
+};
+
+const MOCK_SERVICES_CONTENT = {
+  sectionTitle: "Our Services",
+  sectionSubtitle: "What We Offer",
+  sectionDescription: "Comprehensive solutions tailored to your needs",
+  services: [
+    { id: "1", title: "Strategy Consulting", description: "Data-driven strategies to grow your business and outpace competitors." },
+    { id: "2", title: "Digital Transformation", description: "Modernize your operations with cutting-edge technology solutions." },
+    { id: "3", title: "Brand Development", description: "Create a powerful brand identity that resonates with your audience." },
+  ],
+};
+
+const MOCK_ABOUT_CONTENT = {
+  sectionTitle: "About Us",
+  headline: "Building Success Together",
+  story: "Founded in 2020, we've helped over 500 businesses transform their operations. Our team of experts brings decades of combined experience to every project.",
+  mission: "To empower businesses with the tools and strategies they need to thrive in a digital world.",
+  stats: [
+    { value: "500+", label: "Clients Served" },
+    { value: "98%", label: "Satisfaction Rate" },
+    { value: "10+", label: "Years Experience" },
+  ],
+};
 
 interface BuilderLayoutProps {
   conversationId: string;
@@ -41,6 +78,7 @@ const SECTION_ORDER: Record<string, number> = {
 export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [mockContent, setMockContent] = useState<SiteContent | null>(null);
 
   const { 
     initializeConversation,
@@ -61,6 +99,20 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     clearScrollTarget,
   } = useSiteStore();
 
+  // Check for mock preview mode on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('mockPreview') === 'true') {
+        setMockContent({
+          hero: MOCK_HERO_CONTENT,
+          services: MOCK_SERVICES_CONTENT,
+          about: MOCK_ABOUT_CONTENT,
+        });
+      }
+    }
+  }, []);
+
   // Initialize conversation state
   useEffect(() => {
     initializeConversation({
@@ -72,10 +124,12 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     });
     
     // Initialize site state - use name property from BusinessProfile
+    // Also reset sections when starting a new conversation
     initializeSite({
       id: `site-${conversationId}`,
       conversationId,
       name: initialData.businessProfile?.name ?? 'Untitled Site',
+      sections: [], // Clear sections for new conversation
     });
   }, [conversationId, initialData, initializeConversation, initializeSite]);
 
@@ -87,15 +141,30 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Get variant based on brand personality
+  const getVariantForPersonality = (): 1 | 2 | 3 | 4 | 5 => {
+    // Check extracted business profile first, then initialData
+    const extractedProfile = extractedContent.business_profile as BusinessProfile | undefined;
+    const businessProfile = extractedProfile || initialData.businessProfile;
+    if (!businessProfile?.brandPersonality?.length) return 1;
+    
+    // Map first brand personality trait to variant
+    const personality = businessProfile.brandPersonality[0].toLowerCase();
+    return (PERSONALITY_VARIANT_MAP[personality] || 1) as 1 | 2 | 3 | 4 | 5;
+  };
+
   // Sync extracted content to site sections
   useEffect(() => {
+    const variant = getVariantForPersonality();
     Object.entries(extractedContent).forEach(([type, content]) => {
+      // Skip business_profile - it's not a visual section
+      if (type === 'business_profile') return;
       if (content && SECTION_ORDER[type] !== undefined) {
         addSection({
           id: `section-${type}`,
           type: type as SectionType,
           order: SECTION_ORDER[type],
-          variant: 1, // Default variant, can be overridden later
+          variant, // Use personality-based variant
           content,
           isVisible: true,
         });
@@ -111,20 +180,23 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     setExtractedContent(type, content);
   };
 
-  const hasPreviewContent = sections.length > 0 || Object.keys(extractedContent).length > 0;
+  const hasPreviewContent = mockContent !== null || sections.length > 0 || Object.keys(extractedContent).length > 0;
 
-  // Convert sections to SiteContent format for SitePreview
+  // Use mockContent if available (for testing), otherwise build from sections
   const siteContent = useMemo((): SiteContent => {
+    if (mockContent) {
+      return mockContent;
+    }
+    
     const content: SiteContent = {};
     sections.forEach(section => {
       if (section.content) {
-        // Cast the content based on section type
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (content as any)[section.type] = section.content;
       }
     });
     return content;
-  }, [sections]);
+  }, [sections, mockContent]);
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -216,35 +288,34 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
 
       {/* Main content */}
       <main className="flex-1 flex overflow-hidden">
-        <AnimatePresence mode="wait">
-          {/* Chat panel */}
-          {(!isMobile || !showPreview) && (
-            <motion.div
-              key="chat"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className={cn(
-                'flex flex-col bg-white',
-                isMobile ? 'w-full' : 'w-1/2 border-r border-gray-200'
-              )}
-            >
-              <ChatInterface
-                conversationId={conversationId}
-                initialMessages={initialData.messages}
-                currentStep={currentStep}
-                industry={industry ?? undefined}
-                onStepChange={handleStepChange}
-                onExtraction={handleExtraction}
-                className="h-full"
-              />
-            </motion.div>
-          )}
+        {/* Chat panel */}
+        {(!isMobile || !showPreview) && (
+          <motion.div
+            key="chat"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className={cn(
+              'flex flex-col bg-white',
+              isMobile ? 'w-full' : 'w-1/2 border-r border-gray-200'
+            )}
+          >
+            <ChatInterface
+              conversationId={conversationId}
+              initialMessages={initialData.messages}
+              currentStep={currentStep}
+              industry={industry ?? undefined}
+              onStepChange={handleStepChange}
+              onExtraction={handleExtraction}
+              className="h-full"
+            />
+          </motion.div>
+        )}
 
-          {/* Preview panel */}
-          {(!isMobile || showPreview) && (
-            <motion.div
-              key="preview"
+        {/* Preview panel */}
+        {(!isMobile || showPreview) && (
+          <motion.div
+            key="preview"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
@@ -261,7 +332,6 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
               />
             </motion.div>
           )}
-        </AnimatePresence>
       </main>
     </div>
   );

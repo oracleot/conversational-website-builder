@@ -60,17 +60,23 @@ const initialState = {
 
 export const useConversationStore = create<ConversationState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
-      initializeConversation: (data) => set({
-        id: data.id,
-        currentStep: data.currentStep,
-        industry: data.industry ?? null,
-        businessProfile: data.businessProfile ?? null,
-        messages: data.messages ?? [],
-        error: null,
-      }),
+      initializeConversation: (data) => {
+        const state = get();
+        // Reset extractedContent when starting a new conversation
+        const isNewConversation = state.id !== data.id;
+        set({
+          id: data.id,
+          currentStep: data.currentStep,
+          industry: data.industry ?? null,
+          businessProfile: data.businessProfile ?? null,
+          messages: data.messages ?? [],
+          extractedContent: isNewConversation ? {} : state.extractedContent,
+          error: null,
+        });
+      },
 
       setCurrentStep: (step) => set({ currentStep: step }),
       

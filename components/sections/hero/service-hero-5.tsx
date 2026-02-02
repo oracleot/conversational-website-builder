@@ -82,36 +82,38 @@ export function ServiceHero5({ content, className, id }: HeroSectionProps) {
           </motion.p>
 
           {/* CTAs with playful styling */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-wrap justify-center gap-4"
-          >
-            <Button
-              asChild
-              size="lg"
-              className="h-14 px-8 text-base font-semibold bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-full shadow-lg shadow-orange-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/30 hover:-translate-y-1"
+          {content.cta && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-wrap justify-center gap-4"
             >
-              <a href={content.cta.primaryAction} className="flex items-center gap-2">
-                {content.cta.primary}
-                <span className="text-lg">✨</span>
-              </a>
-            </Button>
-            
-            {content.cta.secondary && (
               <Button
                 asChild
-                variant="outline"
                 size="lg"
-                className="h-14 px-8 text-base font-semibold border-2 border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-600 rounded-full transition-all duration-300 hover:-translate-y-1"
+                className="h-14 px-8 text-base font-semibold bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-full shadow-lg shadow-orange-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/30 hover:-translate-y-1"
               >
-                <a href={content.cta.secondaryAction}>
-                  {content.cta.secondary}
+                <a href={content.cta.primaryAction} className="flex items-center gap-2">
+                  {content.cta.primary}
+                  <span className="text-lg">✨</span>
                 </a>
               </Button>
-            )}
-          </motion.div>
+              
+              {content.cta.secondary && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-14 px-8 text-base font-semibold border-2 border-gray-300 text-gray-700 hover:border-orange-400 hover:text-orange-600 rounded-full transition-all duration-300 hover:-translate-y-1"
+                >
+                  <a href={content.cta.secondaryAction}>
+                    {content.cta.secondary}
+                  </a>
+                </Button>
+              )}
+            </motion.div>
+          )}
 
           {/* Trust indicators */}
           <motion.div

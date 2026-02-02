@@ -108,32 +108,22 @@ export function SitePreview({
 
   return (
     <div className={className}>
-      <AnimatePresence mode="wait">
-        {sectionsWithContent.map((sectionType, index) => {
-          const sectionContent = content[sectionType];
-          if (!sectionContent) return null;
+      {sectionsWithContent.map((sectionType) => {
+        const sectionContent = content[sectionType];
+        if (!sectionContent) return null;
 
-          const variant = variantOverrides[sectionType] || defaultVariant;
-          const isActive = activeSectionId === sectionType;
+        const variant = variantOverrides[sectionType] || defaultVariant;
 
-          return (
-            <SectionWrapper
-              key={sectionType}
-              id={sectionType}
-              animationVariant="slide-up"
-              delay={index * 0.1}
-              isActive={isActive}
-            >
-              <ComponentLoader
-                sectionType={sectionType}
-                variant={variant}
-                // Cast is safe because we filtered for sections with content
-                content={sectionContent as never}
-              />
-            </SectionWrapper>
-          );
-        })}
-      </AnimatePresence>
+        return (
+          <div key={sectionType} id={sectionType}>
+            <ComponentLoader
+              sectionType={sectionType}
+              variant={variant}
+              content={sectionContent as never}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

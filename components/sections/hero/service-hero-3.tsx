@@ -78,35 +78,37 @@ export function ServiceHero3({ content, className, id }: HeroSectionProps) {
           </motion.div>
 
           {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="flex flex-wrap gap-4"
-          >
-            <Button
-              asChild
-              size="lg"
-              className="h-16 px-10 text-lg font-black uppercase tracking-wider bg-white text-black hover:bg-orange-500 hover:text-white rounded-none transition-all duration-300 hover:scale-105"
+          {content.cta && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="flex flex-wrap gap-4"
             >
-              <a href={content.cta.primaryAction}>
-                {content.cta.primary}
-              </a>
-            </Button>
-            
-            {content.cta.secondary && (
               <Button
                 asChild
-                variant="outline"
                 size="lg"
-                className="h-16 px-10 text-lg font-black uppercase tracking-wider border-2 border-white text-white hover:bg-white hover:text-black rounded-none transition-all duration-300 hover:scale-105"
+                className="h-16 px-10 text-lg font-black uppercase tracking-wider bg-white text-black hover:bg-orange-500 hover:text-white rounded-none transition-all duration-300 hover:scale-105"
               >
-                <a href={content.cta.secondaryAction}>
-                  {content.cta.secondary}
+                <a href={content.cta.primaryAction}>
+                  {content.cta.primary}
                 </a>
               </Button>
-            )}
-          </motion.div>
+              
+              {content.cta.secondary && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-16 px-10 text-lg font-black uppercase tracking-wider border-2 border-white text-white hover:bg-white hover:text-black rounded-none transition-all duration-300 hover:scale-105"
+                >
+                  <a href={content.cta.secondaryAction}>
+                    {content.cta.secondary}
+                  </a>
+                </Button>
+              )}
+            </motion.div>
+          )}
         </div>
       </div>
 

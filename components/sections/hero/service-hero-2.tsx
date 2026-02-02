@@ -98,38 +98,40 @@ export function ServiceHero2({ content, className, id }: HeroSectionProps) {
           </motion.p>
 
           {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-wrap justify-center gap-4"
-          >
-            <Button
-              asChild
-              size="lg"
-              className="h-14 px-8 text-base font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/30 hover:-translate-y-0.5 border-0"
+          {content.cta && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="flex flex-wrap justify-center gap-4"
             >
-              <a href={content.cta.primaryAction}>
-                {content.cta.primary}
-                <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </a>
-            </Button>
-            
-            {content.cta.secondary && (
               <Button
                 asChild
-                variant="outline"
                 size="lg"
-                className="h-14 px-8 text-base font-semibold bg-white/5 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 rounded-xl transition-all duration-300 hover:-translate-y-0.5"
+                className="h-14 px-8 text-base font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/30 hover:-translate-y-0.5 border-0"
               >
-                <a href={content.cta.secondaryAction}>
-                  {content.cta.secondary}
+                <a href={content.cta.primaryAction}>
+                  {content.cta.primary}
+                  <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
                 </a>
               </Button>
-            )}
-          </motion.div>
+              
+              {content.cta.secondary && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-14 px-8 text-base font-semibold bg-white/5 backdrop-blur-xl border border-white/10 text-white hover:bg-white/10 rounded-xl transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  <a href={content.cta.secondaryAction}>
+                    {content.cta.secondary}
+                  </a>
+                </Button>
+              )}
+            </motion.div>
+          )}
 
           {/* Feature badges */}
           <motion.div

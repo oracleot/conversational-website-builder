@@ -137,11 +137,14 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
           )}
         </div>
 
-        {/* Timestamp */}
-        <div className={cn(
-          'text-xs mt-2',
-          isUser ? 'text-blue-100' : 'text-gray-400'
-        )}>
+        {/* Timestamp - suppressHydrationWarning to avoid SSR mismatch with locale formatting */}
+        <div 
+          className={cn(
+            'text-xs mt-2',
+            isUser ? 'text-blue-100' : 'text-gray-400'
+          )}
+          suppressHydrationWarning
+        >
           {formatTime(message.timestamp)}
         </div>
       </div>
@@ -162,7 +165,10 @@ function TypingIndicator() {
 function formatTime(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Use 24-hour format to avoid SSR hydration mismatches with locale
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   } catch {
     return '';
   }

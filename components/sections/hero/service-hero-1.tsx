@@ -73,35 +73,37 @@ export function ServiceHero1({ content, className, id }: HeroSectionProps) {
           </motion.p>
 
           {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-wrap gap-4"
-          >
-            <Button
-              asChild
-              size="lg"
-              className="h-14 px-8 text-base font-semibold bg-slate-900 hover:bg-slate-800 rounded-lg shadow-lg shadow-slate-900/10 transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-0.5"
+          {content.cta && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="flex flex-wrap gap-4"
             >
-              <a href={content.cta.primaryAction}>
-                {content.cta.primary}
-              </a>
-            </Button>
-            
-            {content.cta.secondary && (
               <Button
                 asChild
-                variant="outline"
                 size="lg"
-                className="h-14 px-8 text-base font-semibold border-2 border-slate-300 hover:border-slate-400 text-slate-700 rounded-lg transition-all duration-300 hover:-translate-y-0.5"
+                className="h-14 px-8 text-base font-semibold bg-slate-900 hover:bg-slate-800 rounded-lg shadow-lg shadow-slate-900/10 transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-0.5"
               >
-                <a href={content.cta.secondaryAction}>
-                  {content.cta.secondary}
+                <a href={content.cta.primaryAction}>
+                  {content.cta.primary}
                 </a>
               </Button>
-            )}
-          </motion.div>
+              
+              {content.cta.secondary && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-14 px-8 text-base font-semibold border-2 border-slate-300 hover:border-slate-400 text-slate-700 rounded-lg transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  <a href={content.cta.secondaryAction}>
+                    {content.cta.secondary}
+                  </a>
+                </Button>
+              )}
+            </motion.div>
+          )}
         </div>
       </div>
 

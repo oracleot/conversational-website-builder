@@ -71,35 +71,37 @@ export function ServiceHero4({ content, className, id }: HeroSectionProps) {
             </motion.p>
 
             {/* CTAs */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="flex flex-wrap gap-6"
-            >
-              <Button
-                asChild
-                size="lg"
-                className="h-14 px-10 text-sm font-medium uppercase tracking-[0.2em] bg-[#2c2825] hover:bg-[#1a1816] text-white rounded-none transition-all duration-500 hover:tracking-[0.25em]"
+            {content.cta && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="flex flex-wrap gap-6"
               >
-                <a href={content.cta.primaryAction}>
-                  {content.cta.primary}
-                </a>
-              </Button>
-              
-              {content.cta.secondary && (
                 <Button
                   asChild
-                  variant="ghost"
                   size="lg"
-                  className="h-14 px-6 text-sm font-medium uppercase tracking-[0.2em] text-[#6b6560] hover:text-[#2c2825] rounded-none transition-all duration-500 underline underline-offset-8 decoration-1 hover:decoration-2"
+                  className="h-14 px-10 text-sm font-medium uppercase tracking-[0.2em] bg-[#2c2825] hover:bg-[#1a1816] text-white rounded-none transition-all duration-500 hover:tracking-[0.25em]"
                 >
-                  <a href={content.cta.secondaryAction}>
-                    {content.cta.secondary}
+                  <a href={content.cta.primaryAction}>
+                    {content.cta.primary}
                   </a>
                 </Button>
-              )}
-            </motion.div>
+                
+                {content.cta.secondary && (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="lg"
+                    className="h-14 px-6 text-sm font-medium uppercase tracking-[0.2em] text-[#6b6560] hover:text-[#2c2825] rounded-none transition-all duration-500 underline underline-offset-8 decoration-1 hover:decoration-2"
+                  >
+                    <a href={content.cta.secondaryAction}>
+                      {content.cta.secondary}
+                    </a>
+                  </Button>
+                )}
+              </motion.div>
+            )}
           </div>
 
           {/* Decorative element */}

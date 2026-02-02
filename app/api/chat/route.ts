@@ -91,7 +91,8 @@ export async function POST(request: NextRequest) {
           await addMessage(supabase, conversationId, assistantMessage);
 
           // Determine if we should advance to next step
-          const transition = await orchestrator.determineNextStep(message);
+          // Pass AI response to detect "move on" signals immediately
+          const transition = await orchestrator.determineNextStep(message, fullResponse);
           
           if (transition.nextStep !== conversation.currentStep) {
             // Update conversation step

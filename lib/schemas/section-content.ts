@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// Helper to transform null to undefined for optional fields
+const nullToUndefined = <T>(schema: z.ZodType<T>) =>
+  z.preprocess((val) => (val === null ? undefined : val), schema.optional());
+
 /**
  * Hero Section Content Schema
  */
@@ -9,11 +13,11 @@ export const HeroContentSchema = z.object({
   cta: z.object({
     primary: z.string().min(1),
     primaryAction: z.string().min(1),
-    secondary: z.string().optional(),
-    secondaryAction: z.string().optional(),
-  }),
+    secondary: nullToUndefined(z.string()),
+    secondaryAction: nullToUndefined(z.string()),
+  }).optional(),
   backgroundStyle: z.enum(['image', 'gradient', 'solid']),
-  backgroundImage: z.string().optional(),
+  backgroundImage: nullToUndefined(z.string()),
 });
 
 export type HeroContent = z.infer<typeof HeroContentSchema>;
