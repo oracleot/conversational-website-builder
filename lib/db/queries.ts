@@ -4,7 +4,7 @@ import type {
   SiteConfig,
   LaunchPreferences,
 } from '@/lib/schemas';
-import type { Database, ConversationStep, IndustryType, SiteStatus } from './types';
+import type { Database, ConversationStep, IndustryType, SiteStatus, Json } from './types';
 
 /**
  * Database queries for conversations, sites, and component usage
@@ -25,9 +25,9 @@ export async function createConversation(params: CreateConversationParams = {}) 
     .insert({
       user_id: params.userId || null,
       industry: params.industry || null,
-      current_step: 'industry_selection',
-      messages: [],
-    })
+      current_step: 'industry_selection' as ConversationStep,
+      messages: [] as Json[],
+    } as Database['public']['Tables']['conversations']['Insert'])
     .select()
     .single();
 
@@ -119,9 +119,9 @@ export async function createSite(params: CreateSiteParams) {
     .from('sites')
     .insert({
       conversation_id: params.conversationId,
-      config: params.config as unknown as Database['public']['Tables']['sites']['Insert']['config'],
-      status: 'building',
-    })
+      config: params.config as unknown as Json,
+      status: 'building' as SiteStatus,
+    } as Database['public']['Tables']['sites']['Insert'])
     .select()
     .single();
 
@@ -211,7 +211,7 @@ export async function trackComponentUsage(params: TrackComponentUsageParams) {
       section_type: params.sectionType,
       variant_number: params.variantNumber,
       is_override: params.isOverride,
-    })
+    } as Database['public']['Tables']['component_usage']['Insert'])
     .select()
     .single();
 

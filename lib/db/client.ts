@@ -1,8 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // Client-side Supabase client (uses publishable key)
-export const createBrowserClient = () => {
+export const createBrowserClient = (): SupabaseClient<Database> => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
 
@@ -19,7 +19,7 @@ export const createBrowserClient = () => {
 };
 
 // Server-side Supabase client (uses secret key)
-export const createServerClient = () => {
+export const createServerClient = (): SupabaseClient<Database> => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
@@ -36,9 +36,9 @@ export const createServerClient = () => {
 };
 
 // Singleton instance for server-side usage
-let serverClientInstance: ReturnType<typeof createClient<Database>> | null = null;
+let serverClientInstance: SupabaseClient<Database> | null = null;
 
-export const getServerClient = () => {
+export const getServerClient = (): SupabaseClient<Database> => {
   if (!serverClientInstance) {
     serverClientInstance = createServerClient();
   }
