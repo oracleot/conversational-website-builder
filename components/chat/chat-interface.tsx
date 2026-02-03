@@ -1,71 +1,201 @@
 'use client';
 
 /**
- * ChatInterface - Main chat UI component
- * Combines MessageList, ChatInput, and ProgressIndicator
- * Handles streaming responses and state management
+ * ChatInterface - Main chat UI component for section-focused building
+ * Dark theme matching the landing page aesthetic
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
-import { CompactProgressIndicator } from './progress-indicator';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Message, ConversationStep, IndustryType } from '@/lib/db/types';
+import type { OnboardingData } from '@/components/builder/onboarding-form';
+
+// Helper to format existing content for display
+function formatContentPreview(sectionType: string, content: any): string {
+  if (!content) return 'No content yet.';
+  
+  try {
+    switch (sectionType) {
+      case 'Hero Section':
+        return `**Headline:** ${content.headline || 'Not set'}
+**Subheadline:** ${content.subheadline || 'Not set'}
+**CTA:** ${content.cta?.primary || 'Not set'}`;
+      
+      case 'Services':
+        const serviceCount = content.services?.length || 0;
+        const serviceList = content.services?.map((s: any, i: number) => `${i + 1}. ${s.title}`).join('\n') || '';
+        return `**${serviceCount} services:**
+${serviceList}`;
+      
+      case 'About':
+        return `**Headline:** ${content.headline || 'Not set'}
+**Story:** ${content.story?.substring(0, 150) || 'Not set'}...`;
+      
+      case 'Process':
+        const stepCount = content.steps?.length || 0;
+        const stepList = content.steps?.map((s: any) => `${s.number}. ${s.title}`).join('\n') || '';
+        return `**${stepCount} steps:**
+${stepList}`;
+      
+      case 'Portfolio':
+        const projectCount = content.projects?.length || 0;
+        const projectList = content.projects?.map((p: any, i: number) => `${i + 1}. ${p.title}`).join('\n') || '';
+        return `**${projectCount} projects:**
+${projectList}`;
+      
+      case 'Testimonials':
+        const testimonialCount = content.testimonials?.length || 0;
+        return `**${testimonialCount} testimonials** from satisfied clients`;
+      
+      case 'Contact':
+        return `**Contact info:** ${content.showForm ? 'Form enabled' : 'Form disabled'}
+**Methods:** ${[content.contactInfo?.email, content.contactInfo?.phone].filter(Boolean).join(', ') || 'Not set'}`;
+      
+      default:
+        return JSON.stringify(content, null, 2).substring(0, 200) + '...';
+    }
+  } catch {
+    return 'Content exists but formatting failed.';
+  }
+}
 
 interface ChatInterfaceProps {
   conversationId: string;
   initialMessages?: Message[];
   currentStep: ConversationStep;
   industry?: IndustryType;
-  onStepChange?: (step: ConversationStep) => void;
   onExtraction?: (type: string, content: unknown) => void;
   className?: string;
+  businessInfo?: OnboardingData | null;
+  currentSectionTitle?: string;
+  existingSectionContent?: unknown;
+  isEditingMode?: boolean;
+  selectedSections?: string[]; // User's selected sections for orchestrator
+  onAdvanceSection?: () => void;
+  isLastSection?: boolean;
+  nextSectionTitle?: string;
 }
 
-// Initial welcome message based on current step
-const getInitialWelcomeMessage = (step: ConversationStep): Message => {
-  const welcomeMessages: Partial<Record<ConversationStep, string>> = {
-    industry_selection: `Welcome! I'm excited to help you build your professional website today. 🎉
+// Section-focused welcome message
+const getSectionWelcomeMessage = (
+  sectionTitle: string | undefined,
+  businessName: string | undefined,
+  isEditingMode: boolean = false,
+  existingContent?: unknown
+): Message => {
+  const name = businessName || 'your business';
+  const section = sectionTitle || 'Hero Section';
+  
+  // If editing mode, show different message with existing content summary
+  if (isEditingMode && existingContent) {
+    const contentPreview = formatContentPreview(section, existingContent);
+    return {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: `You're currently editing the **${section}** section! ✏️
 
-To get started, I need to understand your business better. What type of business are you building a website for?
+Here's what you currently have:
+${contentPreview}
 
-**1. Service Business** - Consulting, agencies, professional services, B2B
-**2. Local Business** - Restaurants, salons, retail shops, local services
+What would you like to change or update?`,
+      timestamp: new Date().toISOString(),
+    };
+  }
+  
+  const sectionPrompts: Record<string, string> = {
+    'Hero Section': `Let's create an impactful hero section for ${name}! 🎯
 
-Just tell me about your business and I'll guide you through creating each section!
-
-💡 *Not sure what to say? Click the "Suggest an answer" button for ideas!*`,
-    business_profile: `Great! Now let's capture your business identity.
-
-I'll need a few key details:
-• **Business name** - What's your company called?
-• **Tagline** - A short, catchy phrase that captures what you do
-• **Description** - What does your business do and who do you serve?
-• **Brand personality** - 2-3 words that describe your brand (e.g., professional, friendly, modern)
-• **Contact email** - Where should customers reach you?
-
-Let's start with your business name!
-
-💡 *Stuck? Hit "Suggest an answer" for an example you can customize!*`,
-    hero: `Now let's create your hero section - this is the first thing visitors will see!
-
-I need:
+I'll need a few things from you:
 • **Headline** - Your main value proposition (what makes you special?)
 • **Subheadline** - A supporting message that expands on the headline
-• **Call-to-action** - What should visitors do? (e.g., "Get Started", "Book Consultation")
+• **Call-to-action** - What should visitors do? (e.g., "Get Started", "Book a Call")
 
-What's the main message you want visitors to see first?
+What's the main message you want visitors to see first?`,
+    
+    'Services': `Now let's showcase what ${name} offers! 💼
 
-💡 *Need inspiration? The "Suggest an answer" button can help!*`,
+Tell me about your services:
+• What are the main services or offerings?
+• What benefits do clients get from each?
+• Any pricing or packages you want to highlight?
+
+You can list them out or describe them in your own words.`,
+    
+    'Menu': `Time to show off the menu! 🍽️
+
+Share your menu items with me:
+• Popular dishes or items
+• Prices (if you want to show them)
+• Special categories or sections
+
+Just describe what you offer and I'll organize it beautifully.`,
+    
+    'About': `Let's tell the story of ${name}! 👋
+
+I'd love to hear:
+• How did ${name} get started?
+• What's your mission or vision?
+• What makes you different from competitors?
+• Any impressive stats (years in business, clients served, etc.)?`,
+    
+    'Process': `Let's show how you work with clients! 📋
+
+Walk me through your typical process:
+• What are the main steps?
+• How long does each step take?
+• What can clients expect at each stage?`,
+    
+    'Testimonials': `Social proof time! ⭐
+
+Share some testimonials:
+• What have clients said about working with ${name}?
+• Any specific results or outcomes you can quote?
+• Who are the clients (names, companies, or just titles)?`,
+    
+    'Portfolio': `Let's showcase your best work! 🎨
+
+Tell me about your favorite projects:
+• What was the project?
+• Who was the client?
+• What were the results?`,
+    
+    'Gallery': `Time for some visuals! 🖼️
+
+Describe the photos you'd like to showcase:
+• Photos of your space
+• Action shots of your work
+• Team photos
+• Before/after images`,
+    
+    'Location': `Let's help people find you! 📍
+
+Share your location details:
+• Address
+• Business hours
+• Parking info
+• Any landmarks to help people find you?`,
+    
+    'Contact': `Last but not least - let's make it easy to reach you! 📧
+
+I already have your email from earlier. Let me know:
+• Preferred contact method?
+• Any call-to-action message? (e.g., "Get a free quote")
+• Social media links to include?`,
   };
 
+  const content = sectionPrompts[section] || 
+    `Let's work on your ${section.toLowerCase()}. Tell me what you'd like to include!`;
+
+  // Use unique ID with timestamp to avoid duplicate keys
   return {
-    id: 'welcome-message',
+    id: `welcome-${section.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`,
     role: 'assistant',
-    content: welcomeMessages[step] || `Let's work on your ${step.replace('_', ' ')} section. Tell me what you'd like to include!\n\n💡 *Need help? Click "Suggest an answer" for ideas!*`,
+    content,
     timestamp: new Date().toISOString(),
-    metadata: { step },
+    metadata: { step: section.replace(/\s+/g, '_').toLowerCase() as ConversationStep },
   };
 };
 
@@ -74,19 +204,78 @@ export function ChatInterface({
   initialMessages = [],
   currentStep,
   industry,
-  onStepChange,
   onExtraction,
   className,
+  businessInfo,
+  currentSectionTitle,
+  existingSectionContent,
+  isEditingMode = false,
+  selectedSections = [],
+  onAdvanceSection,
+  isLastSection = false,
+  nextSectionTitle,
 }: ChatInterfaceProps) {
-  // Add welcome message if no messages exist
-  const messagesWithWelcome = initialMessages.length === 0 
-    ? [getInitialWelcomeMessage(currentStep)]
-    : initialMessages;
-  const [messages, setMessages] = useState<Message[]>(messagesWithWelcome);
+  // Compute initial welcome key to track what was shown at mount
+  const initialWelcomeKey = `${currentSectionTitle || 'Hero Section'}-${isEditingMode ? 'edit' : 'new'}`;
+  
+  // Use useMemo for initial messages to prevent recreation on each render
+  const initialMessagesComputed = useMemo(() => {
+    if (initialMessages.length === 0) {
+      return [getSectionWelcomeMessage(
+        currentSectionTitle, 
+        businessInfo?.businessName,
+        isEditingMode,
+        existingSectionContent
+      )];
+    }
+    return initialMessages;
+  }, []); // Only compute once on mount
+  
+  const [messages, setMessages] = useState<Message[]>(initialMessagesComputed);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSectionComplete, setIsSectionComplete] = useState(Boolean(existingSectionContent));
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  
+  // Track which section we've shown welcome message for to avoid duplicates
+  // Initialize with current section if we created an initial welcome message
+  const shownWelcomeForRef = useRef<string>(initialMessages.length === 0 ? initialWelcomeKey : '');
+  
+  // Detect section changes and add welcome message for new section
+  useEffect(() => {
+    if (!currentSectionTitle) return;
+    
+    // Create a unique key for this section + editing mode combination
+    const welcomeKey = `${currentSectionTitle}-${isEditingMode ? 'edit' : 'new'}`;
+    
+    // Only add welcome message if we haven't shown it for this specific section/mode combo
+    if (shownWelcomeForRef.current !== welcomeKey) {
+      shownWelcomeForRef.current = welcomeKey;
+      
+      // Only add new welcome message if this isn't the initial render
+      // (initial message was already added in initialMessagesComputed)
+      setMessages(prev => {
+        const welcomeMessage = getSectionWelcomeMessage(
+          currentSectionTitle, 
+          businessInfo?.businessName,
+          isEditingMode,
+          existingSectionContent
+        );
+        return [...prev, welcomeMessage];
+      });
+    }
+  }, [currentSectionTitle, businessInfo?.businessName, isEditingMode, existingSectionContent]);
+
+  useEffect(() => {
+    setIsSectionComplete(Boolean(existingSectionContent));
+    setExtractionError(null);
+  }, [currentStep, existingSectionContent]);
 
   const handleExtraction = useCallback(async (extractionType: string) => {
+    setIsExtracting(true);
+    setExtractionError(null);
     try {
       const response = await fetch(`/api/conversation/${conversationId}/extract`, {
         method: 'POST',
@@ -95,15 +284,125 @@ export function ChatInterface({
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.content) {
+        const data = await response.json().catch(() => null);
+        if (data?.success && data.content) {
           onExtraction?.(extractionType, data.content);
+          if (extractionType === currentStep) {
+            setIsSectionComplete(true);
+          }
+          return { success: true } as const;
         }
+
+        const errorMessage = data?.error || 'I need a bit more detail to pass validation.';
+        if (extractionType === currentStep) {
+          setIsSectionComplete(false);
+          setExtractionError(`${errorMessage} Please add more details so I can complete this section.`);
+        }
+        return { success: false, error: errorMessage } as const;
       }
+
+      const errorData = await response.json().catch(() => null);
+      const errorMessage = errorData?.error || 'I need a bit more detail to pass validation.';
+      if (extractionType === currentStep) {
+        setIsSectionComplete(false);
+        setExtractionError(`${errorMessage} Please add more details so I can complete this section.`);
+      }
+      return { success: false, error: errorMessage } as const;
     } catch (error) {
       console.error('Extraction error:', error);
+      if (extractionType === currentStep) {
+        setIsSectionComplete(false);
+        setExtractionError('I could not validate this section. Please add more details and try again.');
+      }
+      return { success: false, error: 'Extraction failed' } as const;
+    } finally {
+      setIsExtracting(false);
     }
-  }, [conversationId, onExtraction]);
+  }, [conversationId, onExtraction, currentStep]);
+
+  const handleSuggest = useCallback(async () => {
+    if (isLoading || isSuggesting) return;
+    const sectionType = currentStep as string;
+    if (!['hero', 'services', 'about', 'process', 'portfolio', 'testimonials', 'contact'].includes(sectionType)) {
+      return;
+    }
+    setIsSuggesting(true);
+    setExtractionError(null);
+
+    try {
+      const response = await fetch('/api/chat/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId,
+          sectionType: currentStep,
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || 'Failed to generate suggestion');
+      }
+      if (!data?.content) {
+        throw new Error('Suggestion content missing');
+      }
+
+      const suggestionMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Here is a suggested draft. Click “Use this” to apply it.',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          step: currentStep,
+          suggestion: {
+            sectionType: currentStep,
+            content: data.content,
+          },
+        },
+      };
+
+      setMessages((prev) => [...prev, suggestionMessage]);
+    } catch (error) {
+      console.error('Suggestion error:', error);
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: error instanceof Error ? error.message : 'I could not generate a suggestion right now. Please try again.',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsSuggesting(false);
+    }
+  }, [conversationId, currentStep, isLoading, isSuggesting]);
+
+  const handleUseSuggestion = useCallback((messageId: string, suggestion: NonNullable<Message['metadata']>['suggestion']) => {
+    if (!suggestion) return;
+    const { sectionType, content } = suggestion;
+
+    setMessages((prev) =>
+      prev.map((message): Message => {
+        if (message.id !== messageId) return message;
+        const existingSuggestion = message.metadata?.suggestion;
+        return {
+          ...message,
+          metadata: {
+            ...message.metadata,
+            suggestion: existingSuggestion ? {
+              ...existingSuggestion,
+              applied: true,
+            } : undefined,
+          },
+        };
+      })
+    );
+
+    onExtraction?.(sectionType, content);
+    if (sectionType === currentStep) {
+      setIsSectionComplete(true);
+      setExtractionError(null);
+    }
+  }, [currentStep, onExtraction]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (isLoading) return;
@@ -128,6 +427,9 @@ export function ChatInterface({
         body: JSON.stringify({
           conversationId,
           message: content,
+          isEditingMode,
+          existingSectionContent,
+          selectedSections, // Pass selected sections to orchestrator
         }),
       });
 
@@ -144,7 +446,6 @@ export function ChatInterface({
       }
 
       let fullResponse = '';
-      let stepUpdate: { nextStep?: ConversationStep; shouldExtract?: boolean; extractionType?: string } | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -158,7 +459,6 @@ export function ChatInterface({
             const data = line.slice(6);
             
             if (data === '[DONE]') {
-              // Streaming complete
               break;
             }
 
@@ -168,10 +468,6 @@ export function ChatInterface({
               if (parsed.content) {
                 fullResponse += parsed.content;
                 setStreamingMessage(fullResponse);
-              }
-              
-              if (parsed.type === 'step_update') {
-                stepUpdate = parsed;
               }
               
               if (parsed.error) {
@@ -197,14 +493,10 @@ export function ChatInterface({
         setMessages((prev) => [...prev, assistantMessage]);
       }
 
-      // Handle step transition
-      if (stepUpdate?.nextStep && stepUpdate.nextStep !== currentStep) {
-        onStepChange?.(stepUpdate.nextStep);
-        
-        // Handle extraction if needed
-        if (stepUpdate.shouldExtract && stepUpdate.extractionType) {
-          await handleExtraction(stepUpdate.extractionType);
-        }
+      // Always try to extract content to keep preview updated
+      const sectionType = currentStep as string;
+      if (fullResponse && ['hero', 'services', 'about', 'process', 'portfolio', 'testimonials', 'contact'].includes(sectionType)) {
+        await handleExtraction(sectionType);
       }
 
     } catch (error) {
@@ -223,17 +515,26 @@ export function ChatInterface({
       setIsLoading(false);
       setStreamingMessage('');
     }
-  }, [conversationId, currentStep, isLoading, onStepChange, handleExtraction]);
+  }, [conversationId, currentStep, isLoading, handleExtraction, selectedSections, existingSectionContent, isEditingMode]);
 
   return (
-    <div className={cn('flex flex-col h-full bg-white', className)}>
-      {/* Progress indicator */}
-      <div className="shrink-0 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-        <CompactProgressIndicator
-          currentStep={currentStep}
-          industry={industry}
-        />
-      </div>
+    <div className={cn('flex flex-col h-full bg-[#0a0a0f]', className)}>
+      {/* Section Header */}
+      {currentSectionTitle && (
+        <div className="shrink-0 px-4 py-3 border-b border-white/5 bg-[#0a0a0f]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/20 text-violet-400">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-medium text-white">Working on: {currentSectionTitle}</h2>
+              <p className="text-xs text-zinc-500">Answer the questions to complete this section</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <MessageList
@@ -241,14 +542,42 @@ export function ChatInterface({
         streamingMessage={streamingMessage}
         isTyping={isLoading && !streamingMessage}
         className="flex-1"
+        darkMode
+        onUseSuggestion={handleUseSuggestion}
       />
 
+      {/* Section Controls */}
+      <div className="shrink-0 px-4 pt-3 pb-2 bg-[#0a0a0f]">
+        {extractionError && (
+          <div className="mb-2 rounded-md border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            {extractionError}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-zinc-500">
+            {isSectionComplete
+              ? 'Section complete. You can move to the next one.'
+              : 'Keep answering until the section is complete.'}
+          </span>
+          <Button
+            type="button"
+            onClick={onAdvanceSection}
+            disabled={!onAdvanceSection || !isSectionComplete || isLoading || isExtracting}
+            className="bg-emerald-600/90 text-white hover:bg-emerald-600"
+          >
+            {isLastSection ? 'Finish sections' : `Next section${nextSectionTitle ? `: ${nextSectionTitle}` : ''}`}
+          </Button>
+        </div>
+      </div>
+
       {/* Input */}
-      <div className="shrink-0 px-4 py-4 border-t border-gray-100 bg-white">
+      <div className="shrink-0 px-4 py-4 border-t border-white/5 bg-[#0a0a0f]">
         <ChatInput
           onSend={sendMessage}
-          isLoading={isLoading}
+          onSuggest={handleSuggest}
+          isLoading={isLoading || isSuggesting}
           placeholder={getPlaceholder(currentStep)}
+          darkMode
         />
       </div>
     </div>

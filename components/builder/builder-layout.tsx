@@ -1,58 +1,31 @@
 'use client';
 
 /**
- * BuilderLayout - Split-screen layout for builder page
- * Left: Chat interface, Right: Live preview
- * Responsive: Full-width chat on mobile, split on desktop
+ * BuilderLayout - Main layout for the website builder experience
+ * Flow: Onboarding -> Section Selection -> Section-by-section chat
+ * Dark theme matching landing page aesthetic
+ * Supports URL-based section navigation for editing previous sections
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChatInterface } from '@/components/chat/chat-interface';
-import { ProgressIndicator } from '@/components/chat/progress-indicator';
 import { SitePreview, type SiteContent } from '@/components/sections/preview';
-import { PERSONALITY_VARIANT_MAP } from '@/components/sections';
-import { Button } from '@/components/ui/button';
+import { PERSONALITY_VARIANT_MAP, AVAILABLE_SECTION_TYPES } from '@/components/sections';
+import { OnboardingForm, type OnboardingData } from './onboarding-form';
+import { SectionSuggestions } from './section-suggestions';
+import { FullscreenPreview } from './fullscreen-preview';
+import { SectionProgressTracker, CompactSectionProgress } from './section-progress-tracker';
+import { RecentConversations } from './recent-conversations';
 import { cn } from '@/lib/utils';
 import { useConversationStore } from '@/lib/stores/conversation-store';
 import { useSiteStore } from '@/lib/stores/site-store';
-import { motion } from 'framer-motion';
+import { INDUSTRY_CONFIGS } from '@/lib/registry/industries';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Message, ConversationStep, IndustryType, BusinessProfile, SectionType } from '@/lib/db/types';
 
-// Mock data for testing preview (enable with ?mockPreview=true in URL)
-const MOCK_HERO_CONTENT = {
-  headline: "Transform Your Business with Expert Solutions",
-  subheadline: "We help companies grow through strategic consulting and innovative technology solutions that drive real results.",
-  cta: {
-    primary: "Get Started",
-    primaryAction: "#contact",
-    secondary: "Learn More",
-    secondaryAction: "#about",
-  },
-  backgroundStyle: 'gradient' as const,
-};
-
-const MOCK_SERVICES_CONTENT = {
-  sectionTitle: "Our Services",
-  sectionSubtitle: "What We Offer",
-  sectionDescription: "Comprehensive solutions tailored to your needs",
-  services: [
-    { id: "1", title: "Strategy Consulting", description: "Data-driven strategies to grow your business and outpace competitors." },
-    { id: "2", title: "Digital Transformation", description: "Modernize your operations with cutting-edge technology solutions." },
-    { id: "3", title: "Brand Development", description: "Create a powerful brand identity that resonates with your audience." },
-  ],
-};
-
-const MOCK_ABOUT_CONTENT = {
-  sectionTitle: "About Us",
-  headline: "Building Success Together",
-  story: "Founded in 2020, we've helped over 500 businesses transform their operations. Our team of experts brings decades of combined experience to every project.",
-  mission: "To empower businesses with the tools and strategies they need to thrive in a digital world.",
-  stats: [
-    { value: "500+", label: "Clients Served" },
-    { value: "98%", label: "Satisfaction Rate" },
-    { value: "10+", label: "Years Experience" },
-  ],
-};
+// Builder flow phases
+type BuilderPhase = 'onboarding' | 'section_selection' | 'building' | 'complete';
 
 interface BuilderLayoutProps {
   conversationId: string;
@@ -68,17 +41,41 @@ interface BuilderLayoutProps {
 const SECTION_ORDER: Record<string, number> = {
   hero: 0,
   services: 1,
+  menu: 1,
   about: 2,
   process: 3,
   testimonials: 4,
   portfolio: 5,
-  contact: 6,
+  gallery: 5,
+  location: 6,
+  contact: 7,
 };
 
 export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProps) {
-  const [showPreview, setShowPreview] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mockContent, setMockContent] = useState<SiteContent | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams.get('section');
+  
+  // Determine initial phase based on existing data
+  const getInitialPhase = (): BuilderPhase => {
+    if (initialData.businessProfile && initialData.industry) {
+      // Has business profile, check if there are messages (building in progress)
+      if (initialData.messages && initialData.messages.length > 0) {
+        return 'building';
+      }
+      return 'section_selection';
+    }
+    return 'onboarding';
+  };
+
+  const [phase, setPhase] = useState<BuilderPhase>(getInitialPhase);
+  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
+  const [selectedSections, setSelectedSections] = useState<SectionType[]>([]);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [completedSections, setCompletedSections] = useState<SectionType[]>([]);
+  const [showFullPreview, setShowFullPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [isOnboardingLoading, setIsOnboardingLoading] = useState(false);
 
   const { 
     initializeConversation,
@@ -87,36 +84,19 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     setCurrentStep,
     setExtractedContent,
     extractedContent,
+    updateRecentConversation,
+    recentConversations,
   } = useConversationStore();
 
   const {
     initializeSite,
     addSection,
     sections,
-    previewMode,
-    setPreviewMode,
-    scrollToSection,
-    clearScrollTarget,
+    id: siteId,
+    setSiteId,
   } = useSiteStore();
 
-  // Check for mock preview mode on mount (deferred to avoid sync setState in effect)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('mockPreview') === 'true') {
-        // Defer setState to next microtask to avoid cascading renders
-        queueMicrotask(() => {
-          setMockContent({
-            hero: MOCK_HERO_CONTENT,
-            services: MOCK_SERVICES_CONTENT,
-            about: MOCK_ABOUT_CONTENT,
-          });
-        });
-      }
-    }
-  }, []);
-
-  // Initialize conversation state
+  // Initialize stores
   useEffect(() => {
     initializeConversation({
       id: conversationId,
@@ -126,72 +106,180 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
       messages: initialData.messages,
     });
     
-    // Initialize site state - use name property from BusinessProfile
-    // Also reset sections when starting a new conversation
     initializeSite({
-      id: `site-${conversationId}`,
+      id: conversationId,
       conversationId,
       name: initialData.businessProfile?.name ?? 'Untitled Site',
-      sections: [], // Clear sections for new conversation
+      sections: [],
     });
   }, [conversationId, initialData, initializeConversation, initializeSite]);
 
-  // Check for mobile viewport
+  // Initialize sections from existing data when loading a previous conversation
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    // Only run when we're in building phase but have no selected sections yet
+    if (phase === 'building' && selectedSections.length === 0 && initialData.industry) {
+      // Check if we have persisted section data in recent conversations
+      const recentEntry = recentConversations.find(r => r.id === conversationId);
+      
+      // Get the industry conversation flow to determine which sections were selected
+      const industryConfig = INDUSTRY_CONFIGS[initialData.industry];
+      
+      if (industryConfig) {
+        // Use persisted selected sections if available, otherwise use industry default
+        const flowSections = recentEntry?.selectedSections?.length
+          ? recentEntry.selectedSections
+          : industryConfig.conversationFlow.filter(
+              section => AVAILABLE_SECTION_TYPES.includes(section)
+            ) as SectionType[];
+        
+        // Set the sections for this conversation
+        setSelectedSections(flowSections);
+        
+        // Determine which sections are already completed
+        // Prioritize persisted completedSections, then check extractedContent
+        const completed: SectionType[] = recentEntry?.completedSections?.length
+          ? [...recentEntry.completedSections]
+          : [];
+        
+        // Also check extractedContent for any additional completed sections
+        flowSections.forEach(section => {
+          if (extractedContent[section] && !completed.includes(section)) {
+            completed.push(section);
+          }
+        });
+        
+        if (completed.length > 0) {
+          setCompletedSections(completed);
+          
+          // Set current section index to the first uncompleted section, or last section if all done
+          const firstUncompletedIndex = flowSections.findIndex(
+            section => !completed.includes(section) && !extractedContent[section]
+          );
+          
+          if (firstUncompletedIndex !== -1) {
+            setCurrentSectionIndex(firstUncompletedIndex);
+          } else {
+            // All sections complete, go to last one
+            setCurrentSectionIndex(flowSections.length - 1);
+          }
+        }
+      }
+    }
+  }, [phase, selectedSections.length, initialData.industry, extractedContent, conversationId, recentConversations]);
 
-  // Get variant based on brand personality - memoized to avoid stale closure
+  // Current section being worked on
+  const currentSection = selectedSections[currentSectionIndex] || null;
+
+  // Navigate to a specific section (via URL parameter)
+  const navigateToSection = useCallback((section: SectionType) => {
+    const sectionIndex = selectedSections.indexOf(section);
+    if (sectionIndex !== -1) {
+      setCurrentSectionIndex(sectionIndex);
+      // Update URL without reloading the page
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('section', section);
+      router.replace(`/builder/${conversationId}?${params.toString()}`, { scroll: false });
+    }
+  }, [selectedSections, conversationId, router, searchParams]);
+
+  // Handle URL-based section navigation on mount and when URL changes
+  useEffect(() => {
+    if (phase === 'building' && sectionParam && selectedSections.length > 0) {
+      const sectionIndex = selectedSections.indexOf(sectionParam as SectionType);
+      if (sectionIndex !== -1) {
+        setCurrentSectionIndex(sectionIndex);
+      }
+    }
+  }, [sectionParam, selectedSections, phase]);
+
+  // Update URL when current section changes
+  useEffect(() => {
+    if (phase === 'building' && currentSection && selectedSections.length > 0) {
+      const params = new URLSearchParams(searchParams.toString());
+      const currentUrlSection = params.get('section');
+      if (currentUrlSection !== currentSection) {
+        params.set('section', currentSection);
+        router.replace(`/builder/${conversationId}?${params.toString()}`, { scroll: false });
+      }
+    }
+  }, [currentSection, phase, conversationId, router, searchParams, selectedSections.length]);
+
+  // Get variant based on brand personality
   const getVariantForPersonality = useCallback((): 1 | 2 | 3 | 4 | 5 => {
-    // Check extracted business profile first, then initialData
     const extractedProfile = extractedContent.business_profile as BusinessProfile | undefined;
-    const businessProfile = extractedProfile || initialData.businessProfile;
+    const businessProfile = extractedProfile || initialData.businessProfile || 
+      (onboardingData ? {
+        name: onboardingData.businessName,
+        brandPersonality: onboardingData.brandPersonality,
+      } : null);
+    
     if (!businessProfile?.brandPersonality?.length) return 1;
     
-    // Map first brand personality trait to variant
     const personality = businessProfile.brandPersonality[0].toLowerCase();
     return (PERSONALITY_VARIANT_MAP[personality] || 1) as 1 | 2 | 3 | 4 | 5;
-  }, [extractedContent.business_profile, initialData.businessProfile]);
+  }, [extractedContent.business_profile, initialData.businessProfile, onboardingData]);
 
   // Sync extracted content to site sections
   useEffect(() => {
     const variant = getVariantForPersonality();
     Object.entries(extractedContent).forEach(([type, content]) => {
-      // Skip business_profile - it's not a visual section
       if (type === 'business_profile') return;
       if (content && SECTION_ORDER[type] !== undefined) {
         addSection({
           id: `section-${type}`,
           type: type as SectionType,
           order: SECTION_ORDER[type],
-          variant, // Use personality-based variant
+          variant,
           content,
           isVisible: true,
         });
+        
+        // Mark as completed if not already
+        if (!completedSections.includes(type as SectionType)) {
+          setCompletedSections(prev => [...prev, type as SectionType]);
+        }
       }
     });
-  }, [extractedContent, addSection, getVariantForPersonality]);
+  }, [extractedContent, addSection, getVariantForPersonality, completedSections]);
 
-  // Persist site draft to backend when sections change (for variant API)
+  // Sync completed sections and selected sections to recent conversations store
   useEffect(() => {
-    // Only save if we have sections to persist
-    if (sections.length === 0) return;
+    if (conversationId && (completedSections.length > 0 || selectedSections.length > 0)) {
+      updateRecentConversation(conversationId, {
+        completedSections: [...completedSections],
+        selectedSections: [...selectedSections],
+        currentStep,
+      });
+    }
+  }, [conversationId, completedSections, selectedSections, currentStep, updateRecentConversation]);
+
+  // Persist site draft to backend - create early with business profile
+  useEffect(() => {
+    const rawProfile = extractedContent.business_profile || initialData.businessProfile || 
+      (onboardingData ? {
+        name: onboardingData.businessName,
+        industry: onboardingData.industry,
+        tagline: onboardingData.tagline,
+        description: onboardingData.description,
+        brandPersonality: onboardingData.brandPersonality,
+        contact: {
+          email: onboardingData.email,
+          phone: onboardingData.phone,
+          address: onboardingData.address,
+        },
+      } : null);
     
-    const rawProfile = extractedContent.business_profile || initialData.businessProfile || {};
+    // Need at least a business profile to create a draft
+    if (!rawProfile) return;
+    
     const businessProfile = {
       ...rawProfile as Record<string, unknown>,
-      // Ensure businessName exists (API requires it)
       businessName: (rawProfile as Record<string, unknown>).businessName || 
                     (rawProfile as Record<string, unknown>).name || 
                     'Untitled Business',
       industry: (rawProfile as Record<string, unknown>).industry || 'service',
-      services: (rawProfile as Record<string, unknown>).services || [],
-      targetAudience: (rawProfile as Record<string, unknown>).targetAudience || '',
-      uniqueValue: (rawProfile as Record<string, unknown>).uniqueValue || '',
     };
+    
     const siteConfig = {
       personality: 'professional',
       colorScheme: 'default',
@@ -203,6 +291,7 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
         isVisible: s.isVisible,
       })),
     };
+    
     const content: Record<string, unknown> = {};
     sections.forEach(s => {
       if (s.content) {
@@ -210,7 +299,6 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
       }
     });
 
-    // Save to backend (debounced via async)
     fetch('/api/site/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -220,25 +308,102 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
         content,
         siteConfig,
       }),
-    }).catch(err => console.error('Failed to save site draft:', err));
-  }, [sections, extractedContent, conversationId, initialData.businessProfile]);
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json();
+      })
+      .then((data) => {
+        if (data?.success && data.siteId) {
+          setSiteId(data.siteId);
+        }
+      })
+      .catch(err => console.error('Failed to save site draft:', err));
+  }, [sections, extractedContent, conversationId, initialData.businessProfile, onboardingData, setSiteId]);
 
-  const handleStepChange = (step: ConversationStep) => {
-    setCurrentStep(step);
+  // Handle onboarding completion
+  const handleOnboardingComplete = async (data: OnboardingData) => {
+    setIsOnboardingLoading(true);
+    setOnboardingData(data);
+    
+    // Save business profile to conversation
+    try {
+      await fetch(`/api/conversation/${conversationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: data.industry,
+          businessProfile: {
+            name: data.businessName,
+            industry: data.industry,
+            businessType: data.industry === 'service' ? 'service business' : 'local business',
+            tagline: data.tagline,
+            description: data.description,
+            brandPersonality: data.brandPersonality,
+            contact: {
+              email: data.email,
+              phone: data.phone || null,
+              address: data.address || null,
+            },
+          },
+          currentStep: 'hero',
+        }),
+      });
+      
+      setPhase('section_selection');
+    } catch (error) {
+      console.error('Failed to save onboarding data:', error);
+    } finally {
+      setIsOnboardingLoading(false);
+    }
   };
 
+  // Handle section selection confirmation
+  const handleSectionsConfirmed = (sections: SectionType[]) => {
+    setSelectedSections(sections);
+    setCurrentSectionIndex(0);
+    setPhase('building');
+  };
+
+  const handleAdvanceSection = useCallback(async () => {
+    if (!currentSection) return;
+
+    const currentIndex = selectedSections.indexOf(currentSection);
+    if (currentIndex === -1) return;
+    const isLast = currentIndex >= selectedSections.length - 1;
+    const nextSection = !isLast ? selectedSections[currentIndex + 1] : null;
+    const nextStep = (nextSection || 'complete') as ConversationStep;
+
+    if (!completedSections.includes(currentSection)) {
+      setCompletedSections(prev => [...prev, currentSection]);
+    }
+
+    setCurrentStep(nextStep);
+
+    if (nextSection) {
+      setCurrentSectionIndex(currentIndex + 1);
+    } else {
+      setPhase('complete');
+    }
+
+    try {
+      await fetch(`/api/conversation/${conversationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentStep: nextStep }),
+      });
+    } catch (error) {
+      console.error('Failed to persist step change:', error);
+    }
+  }, [completedSections, conversationId, currentSection, selectedSections, setCurrentStep, setCurrentSectionIndex, setPhase]);
+
+  // Handle extraction
   const handleExtraction = (type: string, content: unknown) => {
     setExtractedContent(type, content);
   };
 
-  const hasPreviewContent = mockContent !== null || sections.length > 0 || Object.keys(extractedContent).length > 0;
-
-  // Use mockContent if available (for testing), otherwise build from sections
+  // Build site content from sections
   const siteContent = useMemo((): SiteContent => {
-    if (mockContent) {
-      return mockContent;
-    }
-    
     const content: SiteContent = {};
     sections.forEach(section => {
       if (section.content) {
@@ -247,215 +412,212 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
       }
     });
     return content;
-  }, [sections, mockContent]);
+  }, [sections]);
 
+  const hasPreviewContent = sections.length > 0 || Object.keys(extractedContent).length > 0;
+  const businessName = onboardingData?.businessName || initialData.businessProfile?.name || 'Your Business';
+
+  // Render appropriate phase
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <header className="shrink-0 h-16 border-b border-gray-200 bg-white flex items-center justify-between px-4 lg:px-6">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-gray-900">
-            Website Builder
-          </h1>
-          <div className="hidden md:block">
-            <ProgressIndicator
-              currentStep={currentStep}
-              industry={industry ?? undefined}
-              className="max-w-2xl"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Preview device toggle - desktop only */}
-          {!isMobile && hasPreviewContent && (
-            <div className="hidden lg:flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-              <Button
-                variant={previewMode === 'desktop' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setPreviewMode('desktop')}
-                className="h-7 px-2"
-                title="Desktop view"
-              >
-                💻
-              </Button>
-              <Button
-                variant={previewMode === 'tablet' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setPreviewMode('tablet')}
-                className="h-7 px-2"
-                title="Tablet view"
-              >
-                📱
-              </Button>
-              <Button
-                variant={previewMode === 'mobile' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setPreviewMode('mobile')}
-                className="h-7 px-2"
-                title="Mobile view"
-              >
-                📲
-              </Button>
-            </div>
-          )}
-
-          {/* Mobile preview toggle */}
-          {isMobile && hasPreviewContent && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPreview(!showPreview)}
-              className="lg:hidden"
-            >
-              {showPreview ? 'Show Chat' : 'Preview'}
-            </Button>
-          )}
-
-          {/* Action buttons (shown when ready) */}
-          {currentStep === 'complete' && (
-            <>
-              <Button variant="outline" size="sm">
-                Export
-              </Button>
-              <Button 
-                size="sm"
-                className="bg-gradient-to-r from-green-600 to-emerald-600"
-              >
-                Ready to Launch
-              </Button>
-            </>
-          )}
-        </div>
-      </header>
-
-      {/* Mobile progress indicator */}
-      <div className="md:hidden shrink-0 px-4 py-2 bg-white border-b border-gray-100">
-        <ProgressIndicator
-          currentStep={currentStep}
-          industry={industry ?? undefined}
-        />
-      </div>
-
-      {/* Main content */}
-      <main className="flex-1 flex overflow-hidden">
-        {/* Chat panel */}
-        {(!isMobile || !showPreview) && (
+    <>
+      <AnimatePresence mode="wait">
+        {phase === 'onboarding' && (
           <motion.div
-            key="chat"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className={cn(
-              'flex flex-col bg-white',
-              isMobile ? 'w-full' : 'w-1/2 border-r border-gray-200'
-            )}
+            key="onboarding"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            <ChatInterface
-              conversationId={conversationId}
-              initialMessages={initialData.messages}
-              currentStep={currentStep}
-              industry={industry ?? undefined}
-              onStepChange={handleStepChange}
-              onExtraction={handleExtraction}
-              className="h-full"
+            <OnboardingForm
+              onComplete={handleOnboardingComplete}
+              isLoading={isOnboardingLoading}
             />
           </motion.div>
         )}
 
-        {/* Preview panel */}
-        {(!isMobile || showPreview) && (
+        {phase === 'section_selection' && (
           <motion.div
-            key="preview"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className={cn(
-                'flex flex-col bg-gray-100',
-                isMobile ? 'w-full' : 'w-1/2'
-              )}
-            >
-              <PreviewPanel 
-                content={siteContent}
-                previewMode={previewMode}
-                scrollToSection={scrollToSection}
-                onScrollComplete={clearScrollTarget}
-                siteId={conversationId}
-              />
-            </motion.div>
-          )}
-      </main>
-    </div>
-  );
-}
+            key="section-selection"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <SectionSuggestions
+              industry={onboardingData?.industry || initialData.industry || 'service'}
+              businessName={businessName}
+              onConfirm={handleSectionsConfirmed}
+              onBack={() => setPhase('onboarding')}
+            />
+          </motion.div>
+        )}
 
-/**
- * Preview panel showing live website preview
- */
-interface PreviewPanelProps {
-  content: SiteContent;
-  previewMode: 'desktop' | 'tablet' | 'mobile';
-  scrollToSection: string | null;
-  onScrollComplete: () => void;
-  siteId: string | null;
-}
+        {(phase === 'building' || phase === 'complete') && (
+          <motion.div
+            key="building"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="h-screen flex flex-col bg-[#06060a]"
+          >
+            {/* Header */}
+            <header className="shrink-0 border-b border-white/5 bg-[#06060a]/90 backdrop-blur-md">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+                {/* Logo & Progress */}
+                <div className="flex items-center gap-4 sm:gap-6">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500">
+                      <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <span className="hidden sm:block text-lg font-semibold tracking-tight text-white">
+                      {businessName}
+                    </span>
+                  </div>
+                </div>
 
-function PreviewPanel({ content, previewMode, scrollToSection, onScrollComplete, siteId }: PreviewPanelProps) {
-  const hasContent = Object.keys(content).length > 0;
+                {/* Actions */}
+                <div className="flex items-center gap-3">
+                  <RecentConversations currentConversationId={conversationId} />
+                  
+                  {hasPreviewContent && (
+                    <button
+                      onClick={() => setShowFullPreview(true)}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                        'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white',
+                        'border border-white/10 hover:border-white/20'
+                      )}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <span className="hidden sm:inline">Preview Site</span>
+                    </button>
+                  )}
 
-  // Get preview container width based on mode
-  const previewWidth = useMemo(() => {
-    switch (previewMode) {
-      case 'mobile': return 'max-w-[375px]';
-      case 'tablet': return 'max-w-[768px]';
-      default: return 'max-w-full';
-    }
-  }, [previewMode]);
+                  {phase === 'complete' && (
+                    <button
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                        'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white',
+                        'hover:shadow-[0_0_30px_-5px_rgba(52,211,153,0.4)]'
+                      )}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Ready to Launch
+                    </button>
+                  )}
+                </div>
+              </div>
 
-  // Handle scroll completion when section comes into view
-  useEffect(() => {
-    if (scrollToSection) {
-      const timer = setTimeout(() => {
-        onScrollComplete();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [scrollToSection, onScrollComplete]);
+              {/* Mobile progress */}
+              <div className="md:hidden px-4 pb-3">
+                <CompactSectionProgress
+                  sections={selectedSections}
+                  currentSection={currentSection}
+                  completedSections={completedSections}
+                />
+              </div>
+            </header>
 
-  if (!hasContent) {
-    return (
-      <div className="h-full flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center">
-            <span className="text-3xl">🌐</span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Your website will appear here
-          </h3>
-          <p className="text-gray-500 text-sm">
-            As you chat and share information about your business, 
-            we&apos;ll build your website preview in real-time.
-          </p>
+            {/* Main Content */}
+            <main className="flex-1 flex overflow-hidden">
+              {/* Sidebar Progress - Desktop */}
+              <aside className="hidden lg:flex w-72 shrink-0 flex-col border-r border-white/5 bg-[#0a0a0f]">
+                <div className="flex-1 overflow-y-auto p-4">
+                  <SectionProgressTracker
+                    sections={selectedSections}
+                    currentSection={currentSection}
+                    completedSections={completedSections}
+                    onSectionClick={navigateToSection}
+                  />
+                </div>
+
+                {/* Mini Preview */}
+                {hasPreviewContent && (
+                  <div className="p-4 border-t border-white/5">
+                    <button
+                      onClick={() => setShowFullPreview(true)}
+                      className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-zinc-900 border border-white/10 hover:border-violet-500/50 transition-all group relative"
+                    >
+                      <div className="absolute inset-0 scale-[0.25] origin-top-left pointer-events-none">
+                        <div className="w-[400%] h-[400%] bg-white">
+                          <SitePreview
+                            content={siteContent}
+                            personality="professional"
+                            className="min-h-full"
+                            isEditable={false}
+                            siteId={conversationId}
+                          />
+                        </div>
+                      </div>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-sm font-medium">View Fullscreen</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </aside>
+
+              {/* Chat Area */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <ChatInterface
+                  conversationId={conversationId}
+                  initialMessages={initialData.messages}
+                  currentStep={currentSection as ConversationStep || 'hero'}
+                  industry={onboardingData?.industry || industry || 'service'}
+                  onExtraction={handleExtraction}
+                  className="h-full"
+                  businessInfo={onboardingData}
+                  currentSectionTitle={currentSection ? getSectionTitle(currentSection) : undefined}
+                  existingSectionContent={currentSection ? extractedContent[currentSection] : undefined}
+                  isEditingMode={currentSection ? completedSections.includes(currentSection) : false}
+                  selectedSections={selectedSections}
+                  onAdvanceSection={handleAdvanceSection}
+                  isLastSection={currentSectionIndex >= selectedSections.length - 1}
+                  nextSectionTitle={selectedSections[currentSectionIndex + 1] ? getSectionTitle(selectedSections[currentSectionIndex + 1]) : undefined}
+                />
+              </div>
+            </main>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Preview Modal */}
+      <FullscreenPreview
+        isOpen={showFullPreview}
+        onClose={() => setShowFullPreview(false)}
+        content={siteContent}
+        siteId={conversationId}
+        previewMode={previewMode}
+        onPreviewModeChange={setPreviewMode}
+      />
+
+      {/* Decorative Elements */}
+      {(phase === 'building' || phase === 'complete') && (
+        <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
+          <div className="absolute -left-40 -top-40 h-[400px] w-[400px] animate-pulse rounded-full bg-gradient-to-br from-violet-600/10 via-fuchsia-500/5 to-transparent blur-[120px]" />
+          <div className="absolute -bottom-40 -right-40 h-[400px] w-[400px] animate-pulse rounded-full bg-gradient-to-tl from-cyan-500/10 via-blue-600/5 to-transparent blur-[120px]" style={{ animationDelay: '1s', animationDuration: '4s' }} />
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full overflow-auto p-4">
-      <div className={cn(
-        'mx-auto bg-white rounded-lg shadow-lg min-h-full transition-all duration-300',
-        previewWidth
-      )}>
-        <SitePreview
-          content={content}
-          personality="professional"
-          activeSectionId={scrollToSection ?? undefined}
-          className="min-h-full"
-          isEditable={true}
-          siteId={siteId}
-        />
-      </div>
-    </div>
+      )}
+    </>
   );
+}
+
+// Helper function for section titles
+function getSectionTitle(section: SectionType): string {
+  const titles: Record<SectionType, string> = {
+    hero: 'Hero Section',
+    services: 'Services',
+    about: 'About',
+    process: 'Process',
+    portfolio: 'Portfolio',
+    testimonials: 'Testimonials',
+    contact: 'Contact',
+  };
+  return titles[section] || section;
 }

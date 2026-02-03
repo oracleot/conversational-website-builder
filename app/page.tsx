@@ -1,11 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useRecentConversations } from "@/lib/stores/conversation-store";
+
+const MAX_CONVERSATIONS = 2;
 
 export default function Home() {
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const recentConversations = useRecentConversations();
 
   const handleStartBuilding = async () => {
     setIsCreating(true);
@@ -22,6 +28,80 @@ export default function Home() {
       setIsCreating(false);
     }
   };
+
+  const handleContinueConversation = (conversationId: string) => {
+    router.push(`/builder/${conversationId}`);
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return '';
+    }
+  };
+
+  const getStepLabel = (step: string) => {
+    const labels: Record<string, string> = {
+      industry_selection: 'Getting started',
+      business_profile: 'Profile setup',
+      hero: 'Hero section',
+      services: 'Services',
+      about: 'About',
+      process: 'Process',
+      portfolio: 'Portfolio',
+      testimonials: 'Testimonials',
+      contact: 'Contact',
+      complete: 'Complete',
+    };
+    return labels[step] || step;
+  };
+
+  const hasRecentConversations = recentConversations.length > 0;
+  const canCreateNew = recentConversations.length < MAX_CONVERSATIONS;
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  // Close on escape
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowDropdown(false);
+    };
+    
+    if (showDropdown) {
+      document.addEventListener('keydown', handleEscape);
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showDropdown]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#06060a]">
@@ -92,48 +172,134 @@ export default function Home() {
 
             {/* CTAs */}
             <div 
-              className="flex flex-col gap-4 sm:flex-row"
+              className="flex flex-col gap-4"
               style={{ animation: "fadeSlideUp 0.8s ease-out 0.3s forwards", opacity: 0 }}
             >
-              <button
-                onClick={handleStartBuilding}
-                disabled={isCreating}
-                className="group relative flex h-14 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 text-base font-medium text-white transition-all hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(167,139,250,0.5)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  {isCreating ? (
-                    <>
-                      <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Creating workspace...
-                    </>
-                  ) : (
-                    <>
-                      Start building free
-                      <svg className="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </>
+              {hasRecentConversations ? (
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  {/* Continue button with dropdown */}
+                  <div ref={dropdownRef} className="relative flex-1 isolate z-20">
+                    <button
+                      onClick={() => setShowDropdown(!showDropdown)}
+                      className="group relative w-full flex h-14 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 text-base font-medium text-white transition-all hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(167,139,250,0.5)] active:scale-[0.98]"
+                    >
+                      <span className="relative z-10 flex items-center gap-2">
+                        Continue building
+                        <svg className={`h-5 w-5 transition-transform ${showDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </button>
+
+                    {/* Dropdown */}
+                    {showDropdown && (
+                      <div className="absolute left-0 right-0 top-full mt-2 z-100 rounded-xl border border-white/10 bg-[#0a0a0f] p-2 shadow-2xl shadow-black/50 backdrop-blur-sm">
+                        <div className="px-3 py-2">
+                          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Recent Projects</p>
+                        </div>
+                        <div className="space-y-1">
+                          {recentConversations.slice(0, MAX_CONVERSATIONS).map((conversation) => (
+                            <button
+                              key={conversation.id}
+                              onClick={() => {
+                                setShowDropdown(false);
+                                handleContinueConversation(conversation.id);
+                              }}
+                              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-left group"
+                            >
+                              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-violet-400">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-medium text-white truncate group-hover:text-violet-300 transition-colors">
+                                    {conversation.businessName}
+                                  </span>
+                                  <span className="text-xs text-zinc-500 flex-shrink-0">
+                                    {formatDate(conversation.lastAccessedAt)}
+                                  </span>
+                                </div>
+                                <span className="text-xs text-zinc-500">
+                                  {getStepLabel(conversation.currentStep)}
+                                </span>
+                              </div>
+                              <svg className="w-5 h-5 text-zinc-600 group-hover:text-violet-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Start new button - only show if under limit */}
+                  {canCreateNew && (
+                    <button
+                      onClick={handleStartBuilding}
+                      disabled={isCreating}
+                      className="flex h-14 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-6 text-base font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isCreating ? (
+                        <>
+                          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Creating...
+                        </>
+                      ) : (
+                        <>Start new project</>
+                      )}
+                    </button>
                   )}
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-              <a
-                href="#how-it-works"
-                className="flex h-14 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-8 text-base font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
-                </svg>
-                Watch demo
-              </a>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <button
+                    onClick={handleStartBuilding}
+                    disabled={isCreating}
+                    className="group relative flex h-14 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 text-base font-medium text-white transition-all hover:scale-[1.02] hover:shadow-[0_0_40px_-5px_rgba(167,139,250,0.5)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <span className="relative z-10 flex items-center gap-2">
+                      {isCreating ? (
+                        <>
+                          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Creating workspace...
+                        </>
+                      ) : (
+                        <>
+                          Start building free
+                          <svg className="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          </svg>
+                        </>
+                      )}
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </button>
+                  <a
+                    href="#how-it-works"
+                    className="flex h-14 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-8 text-base font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
+                    </svg>
+                    Watch demo
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Social proof */}
-            <div 
+            {!hasRecentConversations &&<div 
               className="mt-12 flex items-center gap-8"
               style={{ animation: "fadeSlideUp 0.8s ease-out 0.4s forwards", opacity: 0 }}
             >
@@ -157,7 +323,7 @@ export default function Home() {
                 </div>
                 <span className="text-sm text-zinc-500">Loved by 2,000+ small businesses</span>
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Right column - Visual */}

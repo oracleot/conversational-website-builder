@@ -35,6 +35,15 @@ IMPORTANT RULES:
 - Keep responses concise but warm
 - When asking for information, remind users they can click the "Suggest an answer" button if they need inspiration or aren't sure what to say
 
+SECTION COMPLETION:
+- When you have ALL required information for a section, EXPLICITLY say "Section complete! ✅" or "Got everything for this section!"
+- Then enthusiastically introduce the next section
+- This signals the system to save the section and move forward
+- Be clear and explicit about transitions - don't be subtle
+
+AVAILABLE SECTIONS (only reference these):
+- Hero, Services, About, Process, Portfolio, Testimonials, Contact
+
 Current conversation context will be provided. Your job is to guide them to the next piece of information needed.`;
 
 /**
@@ -66,7 +75,9 @@ Guide them to provide:
 - A subheadline (supporting message)
 - What their main call-to-action button should say
 
-Help them think about what makes their business special and what action they want visitors to take.`,
+Help them think about what makes their business special and what action they want visitors to take.
+
+When you have all three pieces (headline, subheadline, CTA), say "Section complete! ✅" and move to the next section.`,
 
     services: `Now let's showcase their services/offerings.
 
@@ -75,16 +86,13 @@ Help them list:
 - A brief description for each (1-2 sentences)
 - Optional: key features or benefits
 
-Ask them to describe what they offer and how it helps their clients.`,
+Ask them to describe what they offer and how it helps their clients.
 
-    menu: `Let's build their menu section for their local business!
+IMPORTANT: Once they've provided at least 3 services with descriptions, EXPLICITLY say "Services section complete! ✅" and move to the next section. Don't be subtle - use the exact phrase "Section complete! ✅" or "Got everything for this section! ✅" to signal completion.`,
 
-Guide them to provide:
-- Menu categories (e.g., Appetizers, Mains, Desserts)
-- Items within each category
-- Prices and descriptions (optional)
+    menu: `NOTE: Menu section is not yet available. Skip this step.
 
-Start by asking what types of items or services they offer.`,
+If you reach this step, immediately transition to the next available section (about).`,
 
     about: `Time for the About section - their story!
 
@@ -94,7 +102,9 @@ Help them share:
 - Years in business, team size, or other credibility builders
 - Their mission or values
 
-Encourage authentic storytelling - this is where personality shines!`,
+Encourage authentic storytelling - this is where personality shines!
+
+When you have their story and key highlights, say "Section complete! ✅" and move forward.`,
 
     process: `Let's explain their process to potential clients.
 
@@ -103,7 +113,9 @@ Guide them to describe:
 - What happens at each stage
 - What clients can expect
 
-This helps build trust by showing professionalism.`,
+This helps build trust by showing professionalism.
+
+Once they've outlined at least 3 clear steps, say "Got everything! ✅" and proceed.`,
 
     portfolio: `Time to showcase their work!
 
@@ -113,7 +125,9 @@ Ask about:
 - The results or outcomes achieved
 - Any client testimonials related to the work
 
-Even if they don't have formal case studies, past work examples help.`,
+Even if they don't have formal case studies, past work examples help.
+
+When you have at least 2-3 project examples, say "Section complete! ✅" and continue.`,
 
     testimonials: `Let's add social proof with testimonials!
 
@@ -122,26 +136,17 @@ Guide them to provide:
 - The person's name and role (if available)
 - Keep quotes authentic and specific
 
-If they don't have formal testimonials, ask about positive feedback they've received.`,
+If they don't have formal testimonials, ask about positive feedback they've received.
 
-    location: `Now for their location information!
+Once you have at least 1-2 testimonials with author info, say "Section complete! ✅" and move on.`,
 
-Collect:
-- Full business address
-- Business hours (by day)
-- Phone number
-- Any special instructions (parking, entrance, etc.)
+    location: `NOTE: Location section is not yet available. Skip this step.
 
-This helps local customers find and visit them.`,
+If you reach this step, immediately transition to the next available section.`,
 
-    gallery: `Let's create a visual gallery!
+    gallery: `NOTE: Gallery section is not yet available. Skip this step.
 
-Ask about:
-- 4-12 photos they'd want to showcase
-- What each photo represents
-- Any themes or categories
-
-Even without actual photos now, we can plan the gallery structure and use placeholders.`,
+If you reach this step, immediately transition to the next available section.`,
 
     contact: `Final section - the contact form and info!
 
@@ -151,7 +156,9 @@ Gather:
 - Any specific questions they want to ask visitors
 - Social media links
 
-Make it easy for customers to reach out!`,
+Make it easy for customers to reach out!
+
+Once you have their contact preferences and form requirements, say "All sections complete! ✅" and congratulate them.`,
 
     review: `The user has completed all sections. Now summarize what we've built and ask if they'd like to:
 1. Review and edit any section
@@ -278,6 +285,24 @@ ${lastAIQuestion ? `\nIMPORTANT: The user is trying to answer this specific ques
 `;
 
   return basePrompt + (suggestions[step] || 'Generate a helpful example response for this step.');
+}
+
+/**
+ * Generate a JSON-only suggestion prompt for a specific section type
+ */
+export function getSuggestionJsonPrompt(sectionType: SectionType): string {
+  return `You are generating a complete, realistic example for the "${sectionType}" section.
+
+Return ONLY valid JSON that matches the exact structure required for that section.
+Do not include any extra commentary or markdown.
+
+${getExtractionPrompt(sectionType)}
+
+Additional rules:
+- Use realistic, business-friendly wording
+- Avoid placeholders like "Lorem ipsum"
+- If a field is optional and unknown, use null
+`;
 }
 
 // ============================================================================
@@ -509,7 +534,7 @@ Return a JSON object with this exact structure:
 
 Rules:
 - Default to showing a form unless they say otherwise
-- Include fields they specifically mention
+- Include fields they specifically mention using ONLY these keys: "name", "email", "phone", "message", "subject"
 - Add social links if mentioned`
   };
 

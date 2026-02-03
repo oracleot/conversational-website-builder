@@ -27,16 +27,16 @@ export type HeroContent = z.infer<typeof HeroContentSchema>;
  */
 export const ServicesContentSchema = z.object({
   sectionTitle: z.string().min(1),
-  sectionSubtitle: z.string().optional(),
-  sectionDescription: z.string().optional(),
+  sectionSubtitle: nullToUndefined(z.string()),
+  sectionDescription: nullToUndefined(z.string()),
   services: z
     .array(
       z.object({
         id: z.string(),
         title: z.string().min(1).max(50),
         description: z.string().min(1).max(200),
-        icon: z.string().optional(),
-        features: z.array(z.string()).optional(),
+        icon: nullToUndefined(z.string()),
+        features: nullToUndefined(z.array(z.string())),
       })
     )
     .min(1)
@@ -229,26 +229,26 @@ export type GalleryContent = z.infer<typeof GalleryContentSchema>;
  */
 export const ContactContentSchema = z.object({
   sectionTitle: z.string().min(1),
-  heading: z.string().optional(),
-  subheading: z.string().optional(),
-  headline: z.string().optional(),
-  subtext: z.string().optional(),
+  heading: nullToUndefined(z.string()),
+  subheading: nullToUndefined(z.string()),
+  headline: nullToUndefined(z.string()),
+  subtext: nullToUndefined(z.string()),
   showForm: z.boolean(),
   formFields: z
     .array(z.enum(['name', 'email', 'phone', 'message', 'subject']))
     .optional(),
   // Direct access fields for simpler components
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  hours: z.string().optional(),
-  cta: z.string().optional(),
+  email: nullToUndefined(z.string()),
+  phone: nullToUndefined(z.string()),
+  address: nullToUndefined(z.string()),
+  hours: nullToUndefined(z.string()),
+  cta: nullToUndefined(z.string()),
   // Nested contact info (alternative structure)
   contactInfo: z
     .object({
-      email: z.string().email().optional(),
-      phone: z.string().optional(),
-      address: z.string().optional(),
+      email: nullToUndefined(z.string().email()),
+      phone: nullToUndefined(z.string()),
+      address: nullToUndefined(z.string()),
     })
     .optional(),
   socialLinks: z

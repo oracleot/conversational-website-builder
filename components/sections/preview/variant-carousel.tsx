@@ -33,6 +33,7 @@ interface VariantCarouselProps {
   onVariantSelect: (variant: number) => void;
   onClose: () => void;
   isLoading?: boolean;
+  error?: string | null;
   className?: string;
 }
 
@@ -45,6 +46,7 @@ export function VariantCarousel({
   onVariantSelect,
   onClose,
   isLoading = false,
+  error,
   className,
 }: VariantCarouselProps) {
   const [selectedVariant, setSelectedVariant] = useState(currentVariant);
@@ -69,10 +71,13 @@ export function VariantCarousel({
       // Notify parent
       onVariantSelect(variant);
 
-      // Allow animation to complete
-      setTimeout(() => setIsAnimating(false), 300);
+      // Allow animation to complete, then close
+      setTimeout(() => {
+        setIsAnimating(false);
+        onClose();
+      }, 300);
     },
-    [selectedVariant, isAnimating, sectionId, updateSectionVariant, onVariantSelect]
+    [selectedVariant, isAnimating, sectionId, updateSectionVariant, onVariantSelect, onClose]
   );
 
   // Keyboard navigation
@@ -169,6 +174,11 @@ export function VariantCarousel({
 
       {/* Variant Options */}
       <div className="space-y-2">
+        {error && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            {error}
+          </div>
+        )}
         <AnimatePresence mode="popLayout">
           {variants.map((variant) => (
             <VariantOptionCard
@@ -180,6 +190,11 @@ export function VariantCarousel({
             />
           ))}
         </AnimatePresence>
+        {!isLoading && variants.length === 0 && !error && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            No variants available yet. Try again in a moment.
+          </div>
+        )}
       </div>
 
       {/* Footer hint */}
@@ -298,7 +313,8 @@ export function useVariantOptions(siteId: string | null, sectionType: SectionTyp
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch variants');
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error || 'Failed to fetch variants');
       }
 
       const data = await response.json();
