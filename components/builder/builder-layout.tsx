@@ -92,6 +92,8 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     initializeSite,
     addSection,
     sections,
+    id: siteId,
+    setSiteId,
   } = useSiteStore();
 
   // Initialize stores
@@ -105,7 +107,7 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     });
     
     initializeSite({
-      id: `site-${conversationId}`,
+      id: conversationId,
       conversationId,
       name: initialData.businessProfile?.name ?? 'Untitled Site',
       sections: [],
@@ -251,10 +253,8 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     }
   }, [conversationId, completedSections, selectedSections, currentStep, updateRecentConversation]);
 
-  // Persist site draft to backend
+  // Persist site draft to backend - create early with business profile
   useEffect(() => {
-    if (sections.length === 0) return;
-    
     const rawProfile = extractedContent.business_profile || initialData.businessProfile || 
       (onboardingData ? {
         name: onboardingData.businessName,
@@ -267,7 +267,10 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
           phone: onboardingData.phone,
           address: onboardingData.address,
         },
-      } : {});
+      } : null);
+    
+    // Need at least a business profile to create a draft
+    if (!rawProfile) return;
     
     const businessProfile = {
       ...rawProfile as Record<string, unknown>,
@@ -305,8 +308,18 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
         content,
         siteConfig,
       }),
-    }).catch(err => console.error('Failed to save site draft:', err));
-  }, [sections, extractedContent, conversationId, initialData.businessProfile, onboardingData]);
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json();
+      })
+      .then((data) => {
+        if (data?.success && data.siteId) {
+          setSiteId(data.siteId);
+        }
+      })
+      .catch(err => console.error('Failed to save site draft:', err));
+  }, [sections, extractedContent, conversationId, initialData.businessProfile, onboardingData, setSiteId]);
 
   // Handle onboarding completion
   const handleOnboardingComplete = async (data: OnboardingData) => {
@@ -352,38 +365,37 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     setPhase('building');
   };
 
-  // Handle step change from chat
-  const handleStepChange = (step: ConversationStep) => {
-    setCurrentStep(step);
-    
-    // If step indicates a section change, trigger extraction for the current section
-    const stepAsSectionType = step as SectionType;
-    const isMovingToNextSection = selectedSections.includes(stepAsSectionType) && stepAsSectionType !== currentSection;
-    
-    // Check if we should extract content for the current section before moving on
-    if (currentSection && isMovingToNextSection) {
-      // Trigger extraction for the current section
-      handleExtraction(currentSection, extractedContent[currentSection]);
-      
-      // Mark section as complete when moving away from it
-      if (!completedSections.includes(currentSection)) {
-        setCompletedSections(prev => [...prev, currentSection]);
-      }
+  const handleAdvanceSection = useCallback(async () => {
+    if (!currentSection) return;
+
+    const currentIndex = selectedSections.indexOf(currentSection);
+    if (currentIndex === -1) return;
+    const isLast = currentIndex >= selectedSections.length - 1;
+    const nextSection = !isLast ? selectedSections[currentIndex + 1] : null;
+    const nextStep = (nextSection || 'complete') as ConversationStep;
+
+    if (!completedSections.includes(currentSection)) {
+      setCompletedSections(prev => [...prev, currentSection]);
     }
-    
-    // Move to next section ONLY if the orchestrator explicitly says to move to that section
-    if (isMovingToNextSection) {
-      const nextIndex = selectedSections.indexOf(stepAsSectionType);
-      if (nextIndex !== -1) {
-        setCurrentSectionIndex(nextIndex);
-      }
-    }
-    
-    // Check if all sections are complete
-    if (completedSections.length + 1 >= selectedSections.length && isMovingToNextSection) {
+
+    setCurrentStep(nextStep);
+
+    if (nextSection) {
+      setCurrentSectionIndex(currentIndex + 1);
+    } else {
       setPhase('complete');
     }
-  };
+
+    try {
+      await fetch(`/api/conversation/${conversationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentStep: nextStep }),
+      });
+    } catch (error) {
+      console.error('Failed to persist step change:', error);
+    }
+  }, [completedSections, conversationId, currentSection, selectedSections, setCurrentStep, setCurrentSectionIndex, setPhase]);
 
   // Handle extraction
   const handleExtraction = (type: string, content: unknown) => {
@@ -558,7 +570,6 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
                   initialMessages={initialData.messages}
                   currentStep={currentSection as ConversationStep || 'hero'}
                   industry={onboardingData?.industry || industry || 'service'}
-                  onStepChange={handleStepChange}
                   onExtraction={handleExtraction}
                   className="h-full"
                   businessInfo={onboardingData}
@@ -566,6 +577,9 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
                   existingSectionContent={currentSection ? extractedContent[currentSection] : undefined}
                   isEditingMode={currentSection ? completedSections.includes(currentSection) : false}
                   selectedSections={selectedSections}
+                  onAdvanceSection={handleAdvanceSection}
+                  isLastSection={currentSectionIndex >= selectedSections.length - 1}
+                  nextSectionTitle={selectedSections[currentSectionIndex + 1] ? getSectionTitle(selectedSections[currentSectionIndex + 1]) : undefined}
                 />
               </div>
             </main>

@@ -11,15 +11,7 @@ type SiteContentPayload = Record<string, unknown>;
 
 export interface SaveSiteRequest {
   sessionId: string;
-  businessProfile: {
-    businessName: string;
-    industry: string;
-    services: string[];
-    targetAudience: string;
-    uniqueValue: string;
-    tone?: string;
-    personality?: string;
-  };
+  businessProfile: Record<string, unknown>;
   content: SiteContentPayload;
   siteConfig: {
     personality: string;
@@ -47,14 +39,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<SaveSiteR
       }, { status: 400 });
     }
 
-    if (!body.businessProfile?.businessName) {
+    const businessName =
+      (body.businessProfile?.businessName as string | undefined) ||
+      (body.businessProfile?.name as string | undefined);
+    if (!businessName) {
       return NextResponse.json({
         success: false,
         error: 'Business name is required',
       }, { status: 400 });
     }
 
-    if (!body.content) {
+    if (body.content === undefined || body.content === null) {
       return NextResponse.json({
         success: false,
         error: 'Site content is required',
@@ -64,7 +59,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<SaveSiteR
     // Save or update draft
     const result = await saveSiteDraft({
       sessionId: body.sessionId,
-      businessProfile: body.businessProfile,
+      businessProfile: {
+        ...body.businessProfile,
+        businessName,
+      },
       content: body.content,
       siteConfig: body.siteConfig,
     });

@@ -287,6 +287,24 @@ ${lastAIQuestion ? `\nIMPORTANT: The user is trying to answer this specific ques
   return basePrompt + (suggestions[step] || 'Generate a helpful example response for this step.');
 }
 
+/**
+ * Generate a JSON-only suggestion prompt for a specific section type
+ */
+export function getSuggestionJsonPrompt(sectionType: SectionType): string {
+  return `You are generating a complete, realistic example for the "${sectionType}" section.
+
+Return ONLY valid JSON that matches the exact structure required for that section.
+Do not include any extra commentary or markdown.
+
+${getExtractionPrompt(sectionType)}
+
+Additional rules:
+- Use realistic, business-friendly wording
+- Avoid placeholders like "Lorem ipsum"
+- If a field is optional and unknown, use null
+`;
+}
+
 // ============================================================================
 // EXTRACTION PROMPTS FOR STRUCTURED CONTENT
 // ============================================================================
@@ -516,7 +534,7 @@ Return a JSON object with this exact structure:
 
 Rules:
 - Default to showing a form unless they say otherwise
-- Include fields they specifically mention
+- Include fields they specifically mention using ONLY these keys: "name", "email", "phone", "message", "subject"
 - Add social links if mentioned`
   };
 

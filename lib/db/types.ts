@@ -78,6 +78,11 @@ export interface Message {
   metadata?: {
     step?: ConversationStep;
     extractedContent?: unknown;
+    suggestion?: {
+      sectionType: ConversationStep;
+      content: unknown;
+      applied?: boolean;
+    };
   };
 }
 

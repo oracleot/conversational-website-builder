@@ -145,6 +145,19 @@ export class ConversationOrchestrator {
     this.context = context;
   }
 
+  private getStepMessages(): Message[] {
+    const currentStep = this.context.currentStep;
+    const stepMessages = this.context.messages.filter(
+      (message) => message.metadata?.step === currentStep
+    );
+
+    if (stepMessages.length > 0) {
+      return stepMessages;
+    }
+
+    return this.context.messages.slice(-10);
+  }
+
   /**
    * Generate the next AI response based on current conversation state
    */
@@ -157,10 +170,12 @@ Current Step: ${this.context.currentStep}
 ${this.context.industry ? `Industry: ${this.context.industry}` : ''}
 ${this.context.businessProfile ? `Business: ${this.context.businessProfile.name}` : ''}
 
+  Only discuss the current step. Do not revisit previous sections unless the user explicitly asks.
+
 Step-specific guidance:
 ${stepPrompt}`;
 
-    const messages = this.context.messages.map(msg => ({
+    const messages = this.getStepMessages().map(msg => ({
       role: msg.role as 'user' | 'assistant' | 'system',
       content: msg.content
     }));
@@ -190,10 +205,12 @@ Current Step: ${this.context.currentStep}
 ${this.context.industry ? `Industry: ${this.context.industry}` : ''}
 ${this.context.businessProfile ? `Business: ${this.context.businessProfile.name}` : ''}
 
+  Only discuss the current step. Do not revisit previous sections unless the user explicitly asks.
+
 Step-specific guidance:
 ${stepPrompt}${editingContext || ''}`;
 
-    const messages = this.context.messages.map(msg => ({
+    const messages = this.getStepMessages().map(msg => ({
       role: msg.role as 'user' | 'assistant' | 'system',
       content: msg.content
     }));
@@ -611,6 +628,36 @@ Examples of "false" for services:
     sectionType: SectionType | 'business_profile', 
     data: unknown
   ): { success: boolean; data?: unknown; error?: string } {
+    let normalizedData = data;
+    if (sectionType === 'contact' && data && typeof data === 'object') {
+      const contactData = data as Record<string, unknown>;
+      const rawFields = Array.isArray(contactData.formFields)
+        ? (contactData.formFields as unknown[])
+        : null;
+      if (rawFields) {
+        const fieldMap: Record<string, 'name' | 'email' | 'phone' | 'message' | 'subject'> = {
+          name: 'name',
+          fullname: 'name',
+          'full name': 'name',
+          email: 'email',
+          'e-mail': 'email',
+          phone: 'phone',
+          'phone number': 'phone',
+          message: 'message',
+          subject: 'subject',
+          enquiry: 'message',
+          inquiry: 'message'
+        };
+        const normalizedFields = rawFields
+          .map((field) => String(field || '').toLowerCase().trim())
+          .map((field) => fieldMap[field])
+          .filter(Boolean);
+        normalizedData = {
+          ...contactData,
+          formFields: normalizedFields.length > 0 ? normalizedFields : undefined
+        };
+      }
+    }
     const schemas: Record<string, z.ZodSchema> = {
       business_profile: BusinessProfileSchema,
       hero: HeroContentSchema,
@@ -630,7 +677,7 @@ Examples of "false" for services:
       return { success: true, data }; // No schema, pass through
     }
 
-    const result = schema.safeParse(data);
+    const result = schema.safeParse(normalizedData);
     if (result.success) {
       return { success: true, data: result.data };
     }

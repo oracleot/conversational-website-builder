@@ -627,6 +627,41 @@ export async function getSiteDraft(sessionId: string): Promise<{
 }
 
 /**
+ * Get a site draft by its draft ID
+ */
+export async function getSiteDraftById(draftId: string): Promise<{
+  success: boolean;
+  site?: {
+    id: string;
+    sessionId: string;
+    businessProfile: Record<string, unknown>;
+    content: Record<string, unknown>;
+    siteConfig: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+  };
+  error?: string;
+}> {
+  try {
+    for (const draft of siteDrafts.values()) {
+      if (draft.id === draftId) {
+        return { success: true, site: draft };
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Site draft not found',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get draft',
+    };
+  }
+}
+
+/**
  * Get a site by its slug
  */
 export async function getSiteBySlug(slug: string): Promise<{

@@ -94,7 +94,7 @@ export function SectionWrapper({
   const [showCarousel, setShowCarousel] = useState(false);
 
   // Fetch variant options when carousel is shown
-  const { variants, reasoning, isLoading: variantsLoading } = useVariantOptions(
+  const { variants, reasoning, isLoading: variantsLoading, error: variantsError } = useVariantOptions(
     showCarousel && siteId ? siteId : null,
     sectionType || 'hero'
   );
@@ -140,6 +140,7 @@ export function SectionWrapper({
             aiReasoning={aiReasoning || reasoning}
             variants={variants}
             isLoading={variantsLoading || switchLoading}
+            error={variantsError}
             onShowCarousel={() => setShowCarousel(true)}
             onCloseCarousel={() => setShowCarousel(false)}
             onVariantSelect={handleVariantSelect}
@@ -178,6 +179,7 @@ export function SectionWrapper({
           aiReasoning={aiReasoning || reasoning}
           variants={variants}
           isLoading={variantsLoading || switchLoading}
+            error={variantsError}
           onShowCarousel={() => setShowCarousel(true)}
           onCloseCarousel={() => setShowCarousel(false)}
           onVariantSelect={handleVariantSelect}
@@ -218,6 +220,7 @@ interface SectionOverlayProps {
     isCurrent: boolean;
   }>;
   isLoading: boolean;
+  error?: string | null;
   onShowCarousel: () => void;
   onCloseCarousel: () => void;
   onVariantSelect: (variant: number) => void;
@@ -232,6 +235,7 @@ function SectionOverlay({
   aiReasoning,
   variants,
   isLoading,
+  error,
   onShowCarousel,
   onCloseCarousel,
   onVariantSelect,
@@ -338,6 +342,7 @@ function SectionOverlay({
               onVariantSelect={onVariantSelect}
               onClose={onCloseCarousel}
               isLoading={isLoading}
+              error={error}
             />
           </div>
         )}

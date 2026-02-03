@@ -8,6 +8,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Message, ConversationStep, IndustryType } from '@/lib/db/types';
 import type { OnboardingData } from '@/components/builder/onboarding-form';
@@ -66,7 +67,6 @@ interface ChatInterfaceProps {
   initialMessages?: Message[];
   currentStep: ConversationStep;
   industry?: IndustryType;
-  onStepChange?: (step: ConversationStep) => void;
   onExtraction?: (type: string, content: unknown) => void;
   className?: string;
   businessInfo?: OnboardingData | null;
@@ -74,6 +74,9 @@ interface ChatInterfaceProps {
   existingSectionContent?: unknown;
   isEditingMode?: boolean;
   selectedSections?: string[]; // User's selected sections for orchestrator
+  onAdvanceSection?: () => void;
+  isLastSection?: boolean;
+  nextSectionTitle?: string;
 }
 
 // Section-focused welcome message
@@ -201,7 +204,6 @@ export function ChatInterface({
   initialMessages = [],
   currentStep,
   industry,
-  onStepChange,
   onExtraction,
   className,
   businessInfo,
@@ -209,6 +211,9 @@ export function ChatInterface({
   existingSectionContent,
   isEditingMode = false,
   selectedSections = [],
+  onAdvanceSection,
+  isLastSection = false,
+  nextSectionTitle,
 }: ChatInterfaceProps) {
   // Compute initial welcome key to track what was shown at mount
   const initialWelcomeKey = `${currentSectionTitle || 'Hero Section'}-${isEditingMode ? 'edit' : 'new'}`;
@@ -229,6 +234,10 @@ export function ChatInterface({
   const [messages, setMessages] = useState<Message[]>(initialMessagesComputed);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSectionComplete, setIsSectionComplete] = useState(Boolean(existingSectionContent));
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   
   // Track which section we've shown welcome message for to avoid duplicates
   // Initialize with current section if we created an initial welcome message
@@ -259,7 +268,14 @@ export function ChatInterface({
     }
   }, [currentSectionTitle, businessInfo?.businessName, isEditingMode, existingSectionContent]);
 
+  useEffect(() => {
+    setIsSectionComplete(Boolean(existingSectionContent));
+    setExtractionError(null);
+  }, [currentStep, existingSectionContent]);
+
   const handleExtraction = useCallback(async (extractionType: string) => {
+    setIsExtracting(true);
+    setExtractionError(null);
     try {
       const response = await fetch(`/api/conversation/${conversationId}/extract`, {
         method: 'POST',
@@ -268,15 +284,125 @@ export function ChatInterface({
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.content) {
+        const data = await response.json().catch(() => null);
+        if (data?.success && data.content) {
           onExtraction?.(extractionType, data.content);
+          if (extractionType === currentStep) {
+            setIsSectionComplete(true);
+          }
+          return { success: true } as const;
         }
+
+        const errorMessage = data?.error || 'I need a bit more detail to pass validation.';
+        if (extractionType === currentStep) {
+          setIsSectionComplete(false);
+          setExtractionError(`${errorMessage} Please add more details so I can complete this section.`);
+        }
+        return { success: false, error: errorMessage } as const;
       }
+
+      const errorData = await response.json().catch(() => null);
+      const errorMessage = errorData?.error || 'I need a bit more detail to pass validation.';
+      if (extractionType === currentStep) {
+        setIsSectionComplete(false);
+        setExtractionError(`${errorMessage} Please add more details so I can complete this section.`);
+      }
+      return { success: false, error: errorMessage } as const;
     } catch (error) {
       console.error('Extraction error:', error);
+      if (extractionType === currentStep) {
+        setIsSectionComplete(false);
+        setExtractionError('I could not validate this section. Please add more details and try again.');
+      }
+      return { success: false, error: 'Extraction failed' } as const;
+    } finally {
+      setIsExtracting(false);
     }
-  }, [conversationId, onExtraction]);
+  }, [conversationId, onExtraction, currentStep]);
+
+  const handleSuggest = useCallback(async () => {
+    if (isLoading || isSuggesting) return;
+    const sectionType = currentStep as string;
+    if (!['hero', 'services', 'about', 'process', 'portfolio', 'testimonials', 'contact'].includes(sectionType)) {
+      return;
+    }
+    setIsSuggesting(true);
+    setExtractionError(null);
+
+    try {
+      const response = await fetch('/api/chat/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId,
+          sectionType: currentStep,
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || 'Failed to generate suggestion');
+      }
+      if (!data?.content) {
+        throw new Error('Suggestion content missing');
+      }
+
+      const suggestionMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Here is a suggested draft. Click “Use this” to apply it.',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          step: currentStep,
+          suggestion: {
+            sectionType: currentStep,
+            content: data.content,
+          },
+        },
+      };
+
+      setMessages((prev) => [...prev, suggestionMessage]);
+    } catch (error) {
+      console.error('Suggestion error:', error);
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: error instanceof Error ? error.message : 'I could not generate a suggestion right now. Please try again.',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsSuggesting(false);
+    }
+  }, [conversationId, currentStep, isLoading, isSuggesting]);
+
+  const handleUseSuggestion = useCallback((messageId: string, suggestion: NonNullable<Message['metadata']>['suggestion']) => {
+    if (!suggestion) return;
+    const { sectionType, content } = suggestion;
+
+    setMessages((prev) =>
+      prev.map((message): Message => {
+        if (message.id !== messageId) return message;
+        const existingSuggestion = message.metadata?.suggestion;
+        return {
+          ...message,
+          metadata: {
+            ...message.metadata,
+            suggestion: existingSuggestion ? {
+              ...existingSuggestion,
+              applied: true,
+            } : undefined,
+          },
+        };
+      })
+    );
+
+    onExtraction?.(sectionType, content);
+    if (sectionType === currentStep) {
+      setIsSectionComplete(true);
+      setExtractionError(null);
+    }
+  }, [currentStep, onExtraction]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (isLoading) return;
@@ -320,7 +446,6 @@ export function ChatInterface({
       }
 
       let fullResponse = '';
-      let stepUpdate: { nextStep?: ConversationStep; shouldExtract?: boolean; extractionType?: string } | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -343,10 +468,6 @@ export function ChatInterface({
               if (parsed.content) {
                 fullResponse += parsed.content;
                 setStreamingMessage(fullResponse);
-              }
-              
-              if (parsed.type === 'step_update') {
-                stepUpdate = parsed;
               }
               
               if (parsed.error) {
@@ -372,22 +493,10 @@ export function ChatInterface({
         setMessages((prev) => [...prev, assistantMessage]);
       }
 
-      // Handle step transition
-      if (stepUpdate?.nextStep && stepUpdate.nextStep !== currentStep) {
-        // Always extract content when completing a section, even if already in editing mode
-        if (stepUpdate.shouldExtract && stepUpdate.extractionType) {
-          await handleExtraction(stepUpdate.extractionType);
-        }
-        
-        // Then update the step
-        onStepChange?.(stepUpdate.nextStep);
-      } else if (fullResponse) {
-        // Always try to extract content to keep preview updated
-        // Extract the current section type from currentStep
-        const sectionType = currentStep as string;
-        if (['hero', 'services', 'about', 'process', 'portfolio', 'testimonials', 'contact'].includes(sectionType)) {
-          await handleExtraction(sectionType);
-        }
+      // Always try to extract content to keep preview updated
+      const sectionType = currentStep as string;
+      if (fullResponse && ['hero', 'services', 'about', 'process', 'portfolio', 'testimonials', 'contact'].includes(sectionType)) {
+        await handleExtraction(sectionType);
       }
 
     } catch (error) {
@@ -406,7 +515,7 @@ export function ChatInterface({
       setIsLoading(false);
       setStreamingMessage('');
     }
-  }, [conversationId, currentStep, isLoading, onStepChange, handleExtraction, selectedSections, existingSectionContent, isEditingMode]);
+  }, [conversationId, currentStep, isLoading, handleExtraction, selectedSections, existingSectionContent, isEditingMode]);
 
   return (
     <div className={cn('flex flex-col h-full bg-[#0a0a0f]', className)}>
@@ -434,13 +543,39 @@ export function ChatInterface({
         isTyping={isLoading && !streamingMessage}
         className="flex-1"
         darkMode
+        onUseSuggestion={handleUseSuggestion}
       />
+
+      {/* Section Controls */}
+      <div className="shrink-0 px-4 pt-3 pb-2 bg-[#0a0a0f]">
+        {extractionError && (
+          <div className="mb-2 rounded-md border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            {extractionError}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-zinc-500">
+            {isSectionComplete
+              ? 'Section complete. You can move to the next one.'
+              : 'Keep answering until the section is complete.'}
+          </span>
+          <Button
+            type="button"
+            onClick={onAdvanceSection}
+            disabled={!onAdvanceSection || !isSectionComplete || isLoading || isExtracting}
+            className="bg-emerald-600/90 text-white hover:bg-emerald-600"
+          >
+            {isLastSection ? 'Finish sections' : `Next section${nextSectionTitle ? `: ${nextSectionTitle}` : ''}`}
+          </Button>
+        </div>
+      </div>
 
       {/* Input */}
       <div className="shrink-0 px-4 py-4 border-t border-white/5 bg-[#0a0a0f]">
         <ChatInput
           onSend={sendMessage}
-          isLoading={isLoading}
+          onSuggest={handleSuggest}
+          isLoading={isLoading || isSuggesting}
           placeholder={getPlaceholder(currentStep)}
           darkMode
         />

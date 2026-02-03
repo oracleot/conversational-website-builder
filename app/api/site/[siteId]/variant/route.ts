@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSiteDraft, saveSiteDraft, trackComponentUsageInMemory } from '@/lib/db/queries';
+import { getSiteDraft, getSiteDraftById, saveSiteDraft, trackComponentUsageInMemory } from '@/lib/db/queries';
 import {
   selectVariant,
   selectVariantsForSite,
@@ -60,7 +60,10 @@ export async function POST(
     const { sectionType, sections } = parseResult.data;
 
     // Get site data to access business profile
-    const siteResult = await getSiteDraft(siteId);
+    let siteResult = await getSiteDraft(siteId);
+    if (!siteResult.success || !siteResult.site) {
+      siteResult = await getSiteDraftById(siteId);
+    }
     if (!siteResult.success || !siteResult.site) {
       return NextResponse.json(
         { error: siteResult.error ?? 'Site not found' },
@@ -200,7 +203,10 @@ export async function PATCH(
     const { sectionId, sectionType, newVariant, isOverride } = parseResult.data;
 
     // Get existing site
-    const siteResult = await getSiteDraft(siteId);
+    let siteResult = await getSiteDraft(siteId);
+    if (!siteResult.success || !siteResult.site) {
+      siteResult = await getSiteDraftById(siteId);
+    }
     if (!siteResult.success || !siteResult.site) {
       return NextResponse.json(
         { error: siteResult.error ?? 'Site not found' },
@@ -322,7 +328,10 @@ export async function GET(
     }
 
     // Get site data
-    const siteResult = await getSiteDraft(siteId);
+    let siteResult = await getSiteDraft(siteId);
+    if (!siteResult.success || !siteResult.site) {
+      siteResult = await getSiteDraftById(siteId);
+    }
     if (!siteResult.success || !siteResult.site) {
       return NextResponse.json(
         { error: siteResult.error ?? 'Site not found' },

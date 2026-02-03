@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onSuggest?: () => void;
   placeholder?: string;
   disabled?: boolean;
   isLoading?: boolean;
@@ -21,6 +22,7 @@ interface ChatInputProps {
 
 export function ChatInput({
   onSend,
+  onSuggest,
   placeholder = 'Type your message...',
   disabled = false,
   isLoading = false,
@@ -45,8 +47,12 @@ export function ChatInput({
 
   const handleSuggest = useCallback(() => {
     if (disabled || isLoading) return;
+    if (onSuggest) {
+      onSuggest();
+      return;
+    }
     onSend('Suggest an answer');
-  }, [disabled, isLoading, onSend]);
+  }, [disabled, isLoading, onSend, onSuggest]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Submit on Enter (without Shift)

@@ -100,29 +100,6 @@ export async function POST(request: NextRequest) {
 
           await addMessage(supabase, conversationId, assistantMessage);
 
-          // Determine if we should advance to next step
-          // Pass AI response to detect "move on" signals immediately
-          const transition = await orchestrator.determineNextStep(message, fullResponse);
-          
-          if (transition.nextStep !== conversation.currentStep) {
-            // Update conversation step
-            const { updateConversation } = await import('@/lib/db/queries');
-            await updateConversation(supabase, conversationId, {
-              currentStep: transition.nextStep,
-              industry: orchestrator['context'].industry
-            });
-
-            // Send step update event
-            controller.enqueue(encoder.encode(
-              `data: ${JSON.stringify({ 
-                type: 'step_update', 
-                nextStep: transition.nextStep,
-                shouldExtract: transition.shouldExtract,
-                extractionType: transition.extractionType
-              })}\n\n`
-            ));
-          }
-
           // Send done event
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
