@@ -9,7 +9,8 @@ import type {
   ConversationStep, 
   IndustryType, 
   Message, 
-  BusinessProfile 
+  BusinessProfile,
+  SectionType 
 } from '@/lib/db/types';
 
 // Recent conversation entry for history
@@ -19,6 +20,8 @@ export interface RecentConversation {
   industry?: IndustryType;
   lastAccessedAt: string;
   currentStep: ConversationStep;
+  completedSections?: SectionType[];
+  selectedSections?: SectionType[];
 }
 
 interface ConversationState {
@@ -59,6 +62,7 @@ interface ConversationState {
   
   // History actions
   addToRecentConversations: (entry: RecentConversation) => void;
+  updateRecentConversation: (id: string, updates: Partial<RecentConversation>) => void;
   removeFromRecentConversations: (id: string) => void;
   clearRecentConversations: () => void;
   
@@ -185,6 +189,12 @@ export const useConversationStore = create<ConversationState>()(
           recentConversations: [entry, ...filtered].slice(0, 10)
         };
       }),
+      
+      updateRecentConversation: (id, updates) => set((state) => ({
+        recentConversations: state.recentConversations.map(r => 
+          r.id === id ? { ...r, ...updates, lastAccessedAt: new Date().toISOString() } : r
+        )
+      })),
       
       removeFromRecentConversations: (id) => set((state) => ({
         recentConversations: state.recentConversations.filter(r => r.id !== id)

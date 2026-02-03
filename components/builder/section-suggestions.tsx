@@ -38,11 +38,8 @@ const SERVICE_SECTIONS: SectionInfo[] = [
 
 const LOCAL_SECTIONS: SectionInfo[] = [
   { id: 'hero', title: 'Hero Section', description: 'Eye-catching headline and call-to-action', icon: '🎯', required: true },
-  { id: 'menu', title: 'Menu / Services', description: 'What you offer and pricing', icon: '🍽️', required: true },
   { id: 'about', title: 'About', description: 'Your story and what makes you special', icon: '👋', required: true },
-  { id: 'gallery', title: 'Gallery', description: 'Photos of your space and work', icon: '🖼️', required: false },
   { id: 'testimonials', title: 'Testimonials', description: 'Reviews from happy customers', icon: '⭐', required: false },
-  { id: 'location', title: 'Location & Hours', description: 'Where to find you and when', icon: '📍', required: true },
   { id: 'contact', title: 'Contact', description: 'Get in touch', icon: '📧', required: true },
 ];
 

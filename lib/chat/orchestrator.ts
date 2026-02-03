@@ -47,6 +47,7 @@ export interface ConversationContext {
   industry?: IndustryType;
   businessProfile?: BusinessProfile;
   messages: Message[];
+  selectedSections?: SectionType[]; // User's selected sections
 }
 
 export interface ExtractionResult<T> {
@@ -67,6 +68,11 @@ export interface StepTransitionResult {
 // STEP FLOW CONFIGURATION
 // ============================================================================
 
+// Available section components from components/sections
+// Only include sections that have actual component implementations
+const AVAILABLE_SECTION_TYPES = ['hero', 'services', 'about', 'process', 'testimonials', 'portfolio', 'contact'] as const;
+
+// Service industry uses: hero, services, about, process, portfolio, testimonials, contact
 const SERVICE_INDUSTRY_STEPS: ConversationStep[] = [
   'industry_selection',
   'business_profile',
@@ -81,14 +87,13 @@ const SERVICE_INDUSTRY_STEPS: ConversationStep[] = [
   'complete'
 ];
 
+// Local industry uses: hero, about, testimonials, contact (same components, different usage)
+// Note: menu, location, gallery don't have component implementations yet
 const LOCAL_INDUSTRY_STEPS: ConversationStep[] = [
   'industry_selection',
   'business_profile',
   'hero',
-  'menu',
   'about',
-  'location',
-  'gallery',
   'testimonials',
   'contact',
   'review',
@@ -107,17 +112,26 @@ export function getStepFlow(industry?: IndustryType): ConversationStep[] {
 
 /**
  * Get the section type for a conversation step
+ * Only returns section types that have actual component implementations
  */
 export function getSectionTypeForStep(step: ConversationStep): SectionType | null {
+  // Only include sections with actual components in components/sections
   const sectionSteps: ConversationStep[] = [
-    'hero', 'services', 'menu', 'about', 'process', 
-    'portfolio', 'testimonials', 'location', 'gallery', 'contact'
+    'hero', 'services', 'about', 'process', 
+    'portfolio', 'testimonials', 'contact'
   ];
   
   if (sectionSteps.includes(step)) {
     return step as SectionType;
   }
   return null;
+}
+
+/**
+ * Check if a section type has an available component implementation
+ */
+export function isSectionAvailable(sectionType: SectionType): boolean {
+  return AVAILABLE_SECTION_TYPES.includes(sectionType as any);
 }
 
 // ============================================================================
@@ -167,7 +181,7 @@ ${stepPrompt}`;
   /**
    * Stream a response for real-time display
    */
-  async *streamResponse(): AsyncGenerator<string> {
+  async *streamResponse(editingContext?: string): AsyncGenerator<string> {
     const stepPrompt = getStepPrompt(this.context.currentStep, this.context.industry);
     
     const systemPrompt = `${ORCHESTRATION_SYSTEM_PROMPT}
@@ -177,7 +191,7 @@ ${this.context.industry ? `Industry: ${this.context.industry}` : ''}
 ${this.context.businessProfile ? `Business: ${this.context.businessProfile.name}` : ''}
 
 Step-specific guidance:
-${stepPrompt}`;
+${stepPrompt}${editingContext || ''}`;
 
     const messages = this.context.messages.map(msg => ({
       role: msg.role as 'user' | 'assistant' | 'system',
@@ -204,67 +218,136 @@ ${stepPrompt}`;
   }
 
   /**
+   * Detect if USER explicitly wants to move to next section
+   * Only checks user message, not AI response - gives user control
+   */
+  private detectUserMoveOnSignal(userMessage: string): boolean {
+    const moveOnPhrases = [
+      // Explicit transition requests
+      'next section',
+      'move on',
+      'move to next',
+      'proceed',
+      'continue',
+      'go to next',
+      "let's move on",
+      "let's continue",
+      "i'm done",
+      "im done",
+      'done with this',
+      'that\'s all',
+      "that's it",
+      'all set',
+      'looks good',
+      'ready to move',
+      'ready for next',
+      'next please',
+      'skip',
+      // Simple confirmations in response to AI asking if ready
+      'yes',
+      'yep',
+      'yeah',
+      'sure',
+      'ok',
+      'okay',
+      'go ahead',
+    ];
+    
+    const lowerMessage = userMessage.toLowerCase().trim();
+    
+    // Check for explicit move-on phrases
+    const hasExplicitPhrase = moveOnPhrases.some(phrase => lowerMessage.includes(phrase));
+    
+    // For very short messages like "yes", "ok", only count if message is VERY short (user confirming)
+    const shortConfirmations = ['yes', 'yep', 'yeah', 'sure', 'ok', 'okay', 'go ahead'];
+    const isShortConfirmation = shortConfirmations.some(c => lowerMessage === c || lowerMessage === c + '!');
+    
+    return hasExplicitPhrase || isShortConfirmation;
+  }
+
+  /**
    * Detect if AI response signals readiness to move on
+   * Enhanced to catch more explicit transition signals
    */
   private detectMoveOnSignal(aiResponse: string): boolean {
     const moveOnPhrases = [
+      // Explicit transition phrases
+      'section complete',
+      'section is complete',
+      'section done',
+      'section is done',
       'we can move on',
       "let's move on",
-      'move on to',
       "let's proceed",
-      'we can proceed',
       'ready to move',
-      'have everything i need',
-      'have what i need',
-      'that covers',
-      "let's continue to",
       'move to the next',
       'proceed to the next',
       'on to the next',
-      'sounds great! let me',
-      'perfect! now',
-      "let's start building",
-      "let's begin with",
-      "now that we have",
-      "we're ready to",
-      "ready to start",
-      "captured your",
-      "beautifully outlined",
-      "with your business profile",
-      "have all the info",
-      "now let's move",
-      "next up",
-      "moving on to",
-      "let me generate",
-      "i'll start generating",
-      "creating your",
-      "building your",
-      "this section is complete",
-      "section complete",
-      "got everything",
+      'next section',
+      
+      // Completion indicators
+      'have everything',
+      'have all',
+      'got everything',
       "that's everything",
-      "all set for",
-      "services section",
-      "about section",
-      "testimonials section",
-      "contact section",
-      "portfolio section",
-      "process section"
+      'all set',
+      'captured your',
+      'that covers',
+      'enough for',
+      'enough to move',
+      'ready for the next',
+      
+      // Starting next phase
+      'perfect! now',
+      "great! let's",
+      "excellent! let's",
+      "awesome! let's",
+      "fantastic! let's",
+      "wonderful! let's",
+      'now let\'s',
+      "let's continue to",
+      "let's build",
+      "let's create",
+      "let's move to",
+      'moving on to',
+      'proceeding to',
+      
+      // Section-specific markers
+      '✅', // Checkmark emoji as explicit completion signal
+      'services section complete',
+      'hero section complete',
+      'about section complete',
+      'got your services',
+      'captured all.*services'
     ];
     
     const lowerResponse = aiResponse.toLowerCase();
-    return moveOnPhrases.some(phrase => lowerResponse.includes(phrase));
+    return moveOnPhrases.some(phrase => {
+      if (phrase.includes('.*')) {
+        // Handle regex patterns
+        const regex = new RegExp(phrase, 'i');
+        return regex.test(lowerResponse);
+      }
+      return lowerResponse.includes(phrase);
+    });
   }
 
   /**
    * Determine the next step based on user response and AI response
+   * KEY: Transitions only happen when USER explicitly confirms, not just when AI signals
    */
   async determineNextStep(userMessage: string, aiResponse?: string): Promise<StepTransitionResult> {
     const currentStep = this.context.currentStep;
-    const stepFlow = getStepFlow(this.context.industry);
+    // Use user-selected sections if available, otherwise fall back to default flow
+    const stepFlow = this.context.selectedSections && this.context.selectedSections.length > 0
+      ? ['industry_selection', 'business_profile', ...this.context.selectedSections, 'review', 'complete'] as ConversationStep[]
+      : getStepFlow(this.context.industry);
     const currentIndex = stepFlow.indexOf(currentStep);
     
-    // Check if AI response signals we should move on
+    // Check if USER explicitly wants to move on (this is the primary trigger)
+    const userWantsToMoveOn = this.detectUserMoveOnSignal(userMessage);
+    
+    // Check if AI response signals section is complete (secondary - used for extraction only)
     const aiSignalsMoveOn = aiResponse ? this.detectMoveOnSignal(aiResponse) : false;
     
     // Handle industry selection separately
@@ -282,44 +365,30 @@ ${stepPrompt}`;
 
     // Handle business profile - check if complete
     if (currentStep === 'business_profile') {
-      // If AI signals move on, extract immediately
-      if (aiSignalsMoveOn) {
+      // Only move on if user explicitly confirms OR AI signals AND user confirms
+      if (userWantsToMoveOn || aiSignalsMoveOn) {
         return {
           nextStep: 'hero',
           shouldExtract: true,
           extractionType: 'business_profile'
         };
       }
-      const hasEnoughInfo = await this.checkBusinessProfileComplete(userMessage);
-      if (hasEnoughInfo) {
-        return {
-          nextStep: 'hero',
-          shouldExtract: true,
-          extractionType: 'business_profile'
-        };
-      }
+      // Don't auto-check for completion - let user decide when they're done
       return { nextStep: 'business_profile', shouldExtract: false };
     }
 
-    // For section steps, determine if ready to move on
+    // For section steps, ONLY move on when user explicitly confirms
     const sectionType = getSectionTypeForStep(currentStep);
     if (sectionType) {
-      // If AI signals move on, extract immediately
-      if (aiSignalsMoveOn && currentIndex < stepFlow.length - 1) {
+      // User must explicitly confirm to move on - no auto-detection
+      if (userWantsToMoveOn && currentIndex < stepFlow.length - 1) {
         return {
           nextStep: stepFlow[currentIndex + 1],
           shouldExtract: true,
           extractionType: sectionType
         };
       }
-      const isComplete = await this.checkSectionComplete(userMessage, sectionType);
-      if (isComplete && currentIndex < stepFlow.length - 1) {
-        return {
-          nextStep: stepFlow[currentIndex + 1],
-          shouldExtract: true,
-          extractionType: sectionType
-        };
-      }
+      // Stay on current section - user is still working on it
       return { nextStep: currentStep, shouldExtract: false };
     }
 
@@ -418,17 +487,20 @@ Respond with just "true" if we have all required info, or "false" if we need mor
     const requiredFields: Record<SectionType, string[]> = {
       hero: ['headline or main message', 'supporting text or tagline', 'call-to-action'],
       services: ['at least 2-3 services', 'service descriptions'],
-      menu: ['menu categories', 'menu items'],
       about: ['business story or background', 'unique value proposition'],
       process: ['at least 3 steps', 'step descriptions'],
       portfolio: ['at least 2-3 projects', 'project descriptions'],
       testimonials: ['at least 1-2 testimonials', 'author information'],
-      location: ['address', 'business hours'],
-      gallery: ['image descriptions or themes'],
       contact: ['contact method preference', 'any form fields needed']
     };
     
     const fields = requiredFields[sectionType] || ['core content'];
+    
+    // Special handling for services - be more lenient
+    const isServicesSection = sectionType === 'services';
+    const minRequirement = isServicesSection 
+      ? 'enough if the user has described at least 2-3 services or offerings in any form'
+      : 'most required content is present';
     
     const response = await openai.chat.completions.create({
       model: EXTRACTION_MODEL,
@@ -441,7 +513,18 @@ Required fields for ${sectionType}: ${fields.join(', ')}
 
 The user may have provided information across multiple messages. Check if the ACCUMULATED information covers the required fields.
 
-Respond with just "true" if ready to proceed (most required content is present), or "false" if critical information is still missing.`
+${isServicesSection ? 'SPECIAL NOTE FOR SERVICES: Be lenient and consider the section complete if the user has mentioned at least 2-3 services/offerings even if descriptions are brief. They can always add more detail later.' : ''}
+
+Respond with just "true" if ready to proceed (${minRequirement}), or "false" if critical information is still missing.
+
+Examples of "true" for services:
+- User lists 3+ services even without detailed descriptions
+- User describes what they offer in general terms covering multiple services
+- User provides service names and brief benefits
+
+Examples of "false" for services:
+- User has only mentioned 1 service
+- User hasn't described what they offer at all`
         },
         {
           role: 'user',
@@ -563,7 +646,9 @@ Respond with just "true" if ready to proceed (most required content is present),
    * Get progress percentage through conversation
    */
   getProgress(): { current: number; total: number; percentage: number } {
-    const stepFlow = getStepFlow(this.context.industry);
+    const stepFlow = this.context.selectedSections && this.context.selectedSections.length > 0
+      ? ['industry_selection', 'business_profile', ...this.context.selectedSections, 'review', 'complete'] as ConversationStep[]
+      : getStepFlow(this.context.industry);
     const currentIndex = stepFlow.indexOf(this.context.currentStep);
     const total = stepFlow.length - 1; // Exclude 'complete' step
     const current = Math.max(0, currentIndex);
@@ -579,7 +664,9 @@ Respond with just "true" if ready to proceed (most required content is present),
    * Get list of completed sections
    */
   getCompletedSections(): SectionType[] {
-    const stepFlow = getStepFlow(this.context.industry);
+    const stepFlow = this.context.selectedSections && this.context.selectedSections.length > 0
+      ? ['industry_selection', 'business_profile', ...this.context.selectedSections, 'review', 'complete'] as ConversationStep[]
+      : getStepFlow(this.context.industry);
     const currentIndex = stepFlow.indexOf(this.context.currentStep);
     
     return stepFlow

@@ -17,9 +17,12 @@ export async function POST(request: NextRequest) {
     
     // Parse request
     const body = await request.json();
-    const { conversationId, message } = body as {
+    const { conversationId, message, isEditingMode, existingSectionContent, selectedSections } = body as {
       conversationId: string;
       message: string;
+      isEditingMode?: boolean;
+      existingSectionContent?: unknown;
+      selectedSections?: string[];
     };
 
     if (!conversationId || !message) {
@@ -63,7 +66,8 @@ export async function POST(request: NextRequest) {
       currentStep: conversation.currentStep,
       industry: conversation.industry ?? undefined,
       businessProfile: conversation.businessProfile ?? undefined,
-      messages: [...((conversation.messages || []) as Message[]), userMessage]
+      messages: [...((conversation.messages || []) as Message[]), userMessage],
+      selectedSections: selectedSections as any // Pass user-selected sections to orchestrator
     });
 
     // Create streaming response
@@ -73,8 +77,14 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // Add editing mode context to the system prompt if applicable
+          let editingContext = '';
+          if (isEditingMode && existingSectionContent) {
+            editingContext = `\n\nIMPORTANT: The user is EDITING an existing section. Current content:\n${JSON.stringify(existingSectionContent, null, 2)}\n\nHelp them refine or update this content. Ask what they'd like to change specifically.`;
+          }
+          
           // Stream response chunks
-          for await (const chunk of orchestrator.streamResponse()) {
+          for await (const chunk of orchestrator.streamResponse(editingContext)) {
             fullResponse += chunk;
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`));
           }

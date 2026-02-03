@@ -4,12 +4,14 @@
  * BuilderLayout - Main layout for the website builder experience
  * Flow: Onboarding -> Section Selection -> Section-by-section chat
  * Dark theme matching landing page aesthetic
+ * Supports URL-based section navigation for editing previous sections
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChatInterface } from '@/components/chat/chat-interface';
 import { SitePreview, type SiteContent } from '@/components/sections/preview';
-import { PERSONALITY_VARIANT_MAP } from '@/components/sections';
+import { PERSONALITY_VARIANT_MAP, AVAILABLE_SECTION_TYPES } from '@/components/sections';
 import { OnboardingForm, type OnboardingData } from './onboarding-form';
 import { SectionSuggestions } from './section-suggestions';
 import { FullscreenPreview } from './fullscreen-preview';
@@ -18,6 +20,7 @@ import { RecentConversations } from './recent-conversations';
 import { cn } from '@/lib/utils';
 import { useConversationStore } from '@/lib/stores/conversation-store';
 import { useSiteStore } from '@/lib/stores/site-store';
+import { INDUSTRY_CONFIGS } from '@/lib/registry/industries';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Message, ConversationStep, IndustryType, BusinessProfile, SectionType } from '@/lib/db/types';
 
@@ -49,6 +52,10 @@ const SECTION_ORDER: Record<string, number> = {
 };
 
 export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams.get('section');
+  
   // Determine initial phase based on existing data
   const getInitialPhase = (): BuilderPhase => {
     if (initialData.businessProfile && initialData.industry) {
@@ -77,6 +84,8 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     setCurrentStep,
     setExtractedContent,
     extractedContent,
+    updateRecentConversation,
+    recentConversations,
   } = useConversationStore();
 
   const {
@@ -103,8 +112,95 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
     });
   }, [conversationId, initialData, initializeConversation, initializeSite]);
 
+  // Initialize sections from existing data when loading a previous conversation
+  useEffect(() => {
+    // Only run when we're in building phase but have no selected sections yet
+    if (phase === 'building' && selectedSections.length === 0 && initialData.industry) {
+      // Check if we have persisted section data in recent conversations
+      const recentEntry = recentConversations.find(r => r.id === conversationId);
+      
+      // Get the industry conversation flow to determine which sections were selected
+      const industryConfig = INDUSTRY_CONFIGS[initialData.industry];
+      
+      if (industryConfig) {
+        // Use persisted selected sections if available, otherwise use industry default
+        const flowSections = recentEntry?.selectedSections?.length
+          ? recentEntry.selectedSections
+          : industryConfig.conversationFlow.filter(
+              section => AVAILABLE_SECTION_TYPES.includes(section)
+            ) as SectionType[];
+        
+        // Set the sections for this conversation
+        setSelectedSections(flowSections);
+        
+        // Determine which sections are already completed
+        // Prioritize persisted completedSections, then check extractedContent
+        const completed: SectionType[] = recentEntry?.completedSections?.length
+          ? [...recentEntry.completedSections]
+          : [];
+        
+        // Also check extractedContent for any additional completed sections
+        flowSections.forEach(section => {
+          if (extractedContent[section] && !completed.includes(section)) {
+            completed.push(section);
+          }
+        });
+        
+        if (completed.length > 0) {
+          setCompletedSections(completed);
+          
+          // Set current section index to the first uncompleted section, or last section if all done
+          const firstUncompletedIndex = flowSections.findIndex(
+            section => !completed.includes(section) && !extractedContent[section]
+          );
+          
+          if (firstUncompletedIndex !== -1) {
+            setCurrentSectionIndex(firstUncompletedIndex);
+          } else {
+            // All sections complete, go to last one
+            setCurrentSectionIndex(flowSections.length - 1);
+          }
+        }
+      }
+    }
+  }, [phase, selectedSections.length, initialData.industry, extractedContent, conversationId, recentConversations]);
+
   // Current section being worked on
   const currentSection = selectedSections[currentSectionIndex] || null;
+
+  // Navigate to a specific section (via URL parameter)
+  const navigateToSection = useCallback((section: SectionType) => {
+    const sectionIndex = selectedSections.indexOf(section);
+    if (sectionIndex !== -1) {
+      setCurrentSectionIndex(sectionIndex);
+      // Update URL without reloading the page
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('section', section);
+      router.replace(`/builder/${conversationId}?${params.toString()}`, { scroll: false });
+    }
+  }, [selectedSections, conversationId, router, searchParams]);
+
+  // Handle URL-based section navigation on mount and when URL changes
+  useEffect(() => {
+    if (phase === 'building' && sectionParam && selectedSections.length > 0) {
+      const sectionIndex = selectedSections.indexOf(sectionParam as SectionType);
+      if (sectionIndex !== -1) {
+        setCurrentSectionIndex(sectionIndex);
+      }
+    }
+  }, [sectionParam, selectedSections, phase]);
+
+  // Update URL when current section changes
+  useEffect(() => {
+    if (phase === 'building' && currentSection && selectedSections.length > 0) {
+      const params = new URLSearchParams(searchParams.toString());
+      const currentUrlSection = params.get('section');
+      if (currentUrlSection !== currentSection) {
+        params.set('section', currentSection);
+        router.replace(`/builder/${conversationId}?${params.toString()}`, { scroll: false });
+      }
+    }
+  }, [currentSection, phase, conversationId, router, searchParams, selectedSections.length]);
 
   // Get variant based on brand personality
   const getVariantForPersonality = useCallback((): 1 | 2 | 3 | 4 | 5 => {
@@ -143,6 +239,17 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
       }
     });
   }, [extractedContent, addSection, getVariantForPersonality, completedSections]);
+
+  // Sync completed sections and selected sections to recent conversations store
+  useEffect(() => {
+    if (conversationId && (completedSections.length > 0 || selectedSections.length > 0)) {
+      updateRecentConversation(conversationId, {
+        completedSections: [...completedSections],
+        selectedSections: [...selectedSections],
+        currentStep,
+      });
+    }
+  }, [conversationId, completedSections, selectedSections, currentStep, updateRecentConversation]);
 
   // Persist site draft to backend
   useEffect(() => {
@@ -249,18 +356,32 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
   const handleStepChange = (step: ConversationStep) => {
     setCurrentStep(step);
     
-    // Check if current section is complete by seeing if we have extracted content
-    if (currentSection && extractedContent[currentSection]) {
+    // If step indicates a section change, trigger extraction for the current section
+    const stepAsSectionType = step as SectionType;
+    const isMovingToNextSection = selectedSections.includes(stepAsSectionType) && stepAsSectionType !== currentSection;
+    
+    // Check if we should extract content for the current section before moving on
+    if (currentSection && isMovingToNextSection) {
+      // Trigger extraction for the current section
+      handleExtraction(currentSection, extractedContent[currentSection]);
+      
+      // Mark section as complete when moving away from it
       if (!completedSections.includes(currentSection)) {
         setCompletedSections(prev => [...prev, currentSection]);
       }
-      
-      // Move to next section
-      if (currentSectionIndex < selectedSections.length - 1) {
-        setCurrentSectionIndex(prev => prev + 1);
-      } else if (completedSections.length + 1 >= selectedSections.length) {
-        setPhase('complete');
+    }
+    
+    // Move to next section ONLY if the orchestrator explicitly says to move to that section
+    if (isMovingToNextSection) {
+      const nextIndex = selectedSections.indexOf(stepAsSectionType);
+      if (nextIndex !== -1) {
+        setCurrentSectionIndex(nextIndex);
       }
+    }
+    
+    // Check if all sections are complete
+    if (completedSections.length + 1 >= selectedSections.length && isMovingToNextSection) {
+      setPhase('complete');
     }
   };
 
@@ -341,14 +462,6 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
                       {businessName}
                     </span>
                   </div>
-
-                  <div className="hidden md:block">
-                    <CompactSectionProgress
-                      sections={selectedSections}
-                      currentSection={currentSection}
-                      completedSections={completedSections}
-                    />
-                  </div>
                 </div>
 
                 {/* Actions */}
@@ -408,6 +521,7 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
                     sections={selectedSections}
                     currentSection={currentSection}
                     completedSections={completedSections}
+                    onSectionClick={navigateToSection}
                   />
                 </div>
 
@@ -449,6 +563,9 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
                   className="h-full"
                   businessInfo={onboardingData}
                   currentSectionTitle={currentSection ? getSectionTitle(currentSection) : undefined}
+                  existingSectionContent={currentSection ? extractedContent[currentSection] : undefined}
+                  isEditingMode={currentSection ? completedSections.includes(currentSection) : false}
+                  selectedSections={selectedSections}
                 />
               </div>
             </main>
@@ -482,13 +599,10 @@ function getSectionTitle(section: SectionType): string {
   const titles: Record<SectionType, string> = {
     hero: 'Hero Section',
     services: 'Services',
-    menu: 'Menu',
     about: 'About',
     process: 'Process',
     portfolio: 'Portfolio',
     testimonials: 'Testimonials',
-    location: 'Location',
-    gallery: 'Gallery',
     contact: 'Contact',
   };
   return titles[section] || section;

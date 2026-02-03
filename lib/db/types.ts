@@ -42,27 +42,32 @@ export type ServiceSectionType =
   | 'contact';
 
 // Section types for local industry
+// Note: Currently using same components as service industry
+// Future: Add menu, location, gallery components
 export type LocalSectionType = 
   | 'hero'
-  | 'menu'
   | 'about'
-  | 'location'
-  | 'gallery'
   | 'testimonials'
   | 'contact';
 
-// Combined section type
+// Combined section type - only includes sections with actual component implementations
+// Available in components/sections: hero, services, about, process, testimonials, portfolio, contact
+// Not yet implemented: menu, location, gallery (schemas exist but no components)
 export type SectionType = 
   | 'hero'
   | 'services'
-  | 'menu'
   | 'about'
   | 'process'
   | 'portfolio'
   | 'testimonials'
-  | 'location'
-  | 'gallery'
   | 'contact';
+
+// Legacy types (kept for backward compatibility with existing schemas)
+// These have schemas in lib/schemas but no component implementations yet
+export type UnavailableSectionType = 'menu' | 'location' | 'gallery';
+
+// Full section type including unavailable ones (for schema validation only)
+export type AllSectionTypes = SectionType | UnavailableSectionType;
 
 // Message in conversation history
 export interface Message {

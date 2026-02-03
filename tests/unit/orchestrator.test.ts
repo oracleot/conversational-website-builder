@@ -67,11 +67,17 @@ describe('ConversationOrchestrator', () => {
 
     it('should return local industry steps for local type', () => {
       const steps = getStepFlow('local');
-      expect(steps).toContain('menu');
-      expect(steps).toContain('location');
-      expect(steps).toContain('gallery');
+      expect(steps).toContain('hero');
+      expect(steps).toContain('about');
+      expect(steps).toContain('testimonials');
+      expect(steps).toContain('contact');
       expect(steps).not.toContain('services');
       expect(steps).not.toContain('process');
+      expect(steps).not.toContain('portfolio');
+      // menu, location, gallery not available in MVP
+      expect(steps).not.toContain('menu');
+      expect(steps).not.toContain('location');
+      expect(steps).not.toContain('gallery');
     });
   });
 
@@ -142,7 +148,7 @@ describe('ConversationOrchestrator', () => {
     it('should calculate progress for local industry', () => {
       const context: ConversationContext = {
         id: 'test-123',
-        currentStep: 'menu',
+        currentStep: 'about',
         industry: 'local',
         messages: [],
       };

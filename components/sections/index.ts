@@ -77,6 +77,9 @@ export const PERSONALITY_VARIANT_MAP: Record<string, number> = {
   friendly: 5,
 } as const;
 
+// Available section types (those with component implementations)
+export const AVAILABLE_SECTION_TYPES = Object.keys(SECTION_COMPONENTS);
+
 // Section type names
 export type SectionType = keyof typeof SECTION_COMPONENTS;
 export type VariantNumber = 1 | 2 | 3 | 4 | 5;

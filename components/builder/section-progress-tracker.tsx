@@ -20,13 +20,10 @@ interface SectionProgressTrackerProps {
 const SECTION_LABELS: Record<SectionType, { label: string; icon: string }> = {
   hero: { label: 'Hero', icon: '🎯' },
   services: { label: 'Services', icon: '💼' },
-  menu: { label: 'Menu', icon: '🍽️' },
   about: { label: 'About', icon: '👋' },
   process: { label: 'Process', icon: '📋' },
   portfolio: { label: 'Portfolio', icon: '🎨' },
   testimonials: { label: 'Testimonials', icon: '⭐' },
-  location: { label: 'Location', icon: '📍' },
-  gallery: { label: 'Gallery', icon: '🖼️' },
   contact: { label: 'Contact', icon: '📧' },
 };
 
