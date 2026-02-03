@@ -14,6 +14,7 @@ import { OnboardingForm, type OnboardingData } from './onboarding-form';
 import { SectionSuggestions } from './section-suggestions';
 import { FullscreenPreview } from './fullscreen-preview';
 import { SectionProgressTracker, CompactSectionProgress } from './section-progress-tracker';
+import { RecentConversations } from './recent-conversations';
 import { cn } from '@/lib/utils';
 import { useConversationStore } from '@/lib/stores/conversation-store';
 import { useSiteStore } from '@/lib/stores/site-store';
@@ -352,6 +353,8 @@ export function BuilderLayout({ conversationId, initialData }: BuilderLayoutProp
 
                 {/* Actions */}
                 <div className="flex items-center gap-3">
+                  <RecentConversations currentConversationId={conversationId} />
+                  
                   {hasPreviewContent && (
                     <button
                       onClick={() => setShowFullPreview(true)}

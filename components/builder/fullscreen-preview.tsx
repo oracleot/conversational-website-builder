@@ -165,7 +165,7 @@ export function FullscreenPreview({
                   content={content}
                   personality="professional"
                   className="min-h-full"
-                  isEditable={false}
+                  isEditable={true}
                   siteId={siteId}
                 />
               </div>

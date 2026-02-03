@@ -231,7 +231,25 @@ ${stepPrompt}`;
       "captured your",
       "beautifully outlined",
       "with your business profile",
-      "have all the info"
+      "have all the info",
+      "now let's move",
+      "next up",
+      "moving on to",
+      "let me generate",
+      "i'll start generating",
+      "creating your",
+      "building your",
+      "this section is complete",
+      "section complete",
+      "got everything",
+      "that's everything",
+      "all set for",
+      "services section",
+      "about section",
+      "testimonials section",
+      "contact section",
+      "portfolio section",
+      "process section"
     ];
     
     const lowerResponse = aiResponse.toLowerCase();
@@ -385,18 +403,49 @@ Respond with just "true" if we have all required info, or "false" if we need mor
    * Check if section content is complete enough to proceed
    */
   private async checkSectionComplete(userMessage: string, sectionType: SectionType): Promise<boolean> {
+    // Get all messages for the current section from context
+    const sectionMessages = this.context.messages.filter(m => 
+      m.metadata?.step === sectionType || 
+      m.metadata?.step === this.context.currentStep
+    ).slice(-10); // Last 10 messages for this section
+    
+    // Include the current user message in the context
+    const conversationContext = [
+      ...sectionMessages.map(m => `${m.role}: ${m.content}`),
+      `user: ${userMessage}`
+    ].join('\n');
+    
+    const requiredFields: Record<SectionType, string[]> = {
+      hero: ['headline or main message', 'supporting text or tagline', 'call-to-action'],
+      services: ['at least 2-3 services', 'service descriptions'],
+      menu: ['menu categories', 'menu items'],
+      about: ['business story or background', 'unique value proposition'],
+      process: ['at least 3 steps', 'step descriptions'],
+      portfolio: ['at least 2-3 projects', 'project descriptions'],
+      testimonials: ['at least 1-2 testimonials', 'author information'],
+      location: ['address', 'business hours'],
+      gallery: ['image descriptions or themes'],
+      contact: ['contact method preference', 'any form fields needed']
+    };
+    
+    const fields = requiredFields[sectionType] || ['core content'];
+    
     const response = await openai.chat.completions.create({
       model: EXTRACTION_MODEL,
       messages: [
         {
           role: 'system',
-          content: `Analyze this message and determine if the user has provided enough content for the "${sectionType}" section of their website.
-They may have provided partial info across multiple messages. Check if core required fields are present.
-Respond with just "true" if ready to proceed, or "false" if we need more information.`
+          content: `Analyze this conversation and determine if the user has provided enough content for the "${sectionType}" section.
+
+Required fields for ${sectionType}: ${fields.join(', ')}
+
+The user may have provided information across multiple messages. Check if the ACCUMULATED information covers the required fields.
+
+Respond with just "true" if ready to proceed (most required content is present), or "false" if critical information is still missing.`
         },
         {
           role: 'user',
-          content: userMessage
+          content: conversationContext
         }
       ],
       temperature: 0,

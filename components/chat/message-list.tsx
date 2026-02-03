@@ -41,7 +41,7 @@ export function MessageList({
         className
       )}
     >
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="sync">
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} darkMode={darkMode} />
         ))}

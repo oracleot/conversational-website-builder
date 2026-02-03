@@ -5,7 +5,7 @@
  * Dark theme matching the landing page aesthetic
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
 import { cn } from '@/lib/utils';
@@ -136,13 +136,32 @@ export function ChatInterface({
   businessInfo,
   currentSectionTitle,
 }: ChatInterfaceProps) {
-  // Add welcome message if no messages exist
-  const messagesWithWelcome = initialMessages.length === 0 
-    ? [getSectionWelcomeMessage(currentSectionTitle, businessInfo?.businessName)]
-    : initialMessages;
-  const [messages, setMessages] = useState<Message[]>(messagesWithWelcome);
+  // Use useMemo for initial messages to prevent recreation on each render
+  const initialMessagesComputed = useMemo(() => {
+    if (initialMessages.length === 0) {
+      return [getSectionWelcomeMessage(currentSectionTitle, businessInfo?.businessName)];
+    }
+    return initialMessages;
+  }, []); // Only compute once on mount
+  
+  const [messages, setMessages] = useState<Message[]>(initialMessagesComputed);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Use ref for lastSectionTitle to prevent re-render loops
+  const lastSectionTitleRef = useRef<string | undefined>(currentSectionTitle);
+  
+  // Detect section changes and add welcome message for new section
+  useEffect(() => {
+    if (currentSectionTitle && currentSectionTitle !== lastSectionTitleRef.current) {
+      lastSectionTitleRef.current = currentSectionTitle;
+      // Add welcome message for the new section (use requestAnimationFrame to batch updates)
+      requestAnimationFrame(() => {
+        const welcomeMessage = getSectionWelcomeMessage(currentSectionTitle, businessInfo?.businessName);
+        setMessages(prev => [...prev, welcomeMessage]);
+      });
+    }
+  }, [currentSectionTitle, businessInfo?.businessName]);
 
   const handleExtraction = useCallback(async (extractionType: string) => {
     try {
