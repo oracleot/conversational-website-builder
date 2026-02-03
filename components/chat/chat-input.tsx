@@ -2,7 +2,7 @@
 
 /**
  * ChatInput - Text input component for sending messages
- * Features: Auto-resize textarea, keyboard shortcuts, loading state
+ * Features: Auto-resize textarea, keyboard shortcuts, loading state, dark mode
  */
 
 import { useState, useRef, useCallback, KeyboardEvent } from 'react';
@@ -16,6 +16,7 @@ interface ChatInputProps {
   disabled?: boolean;
   isLoading?: boolean;
   className?: string;
+  darkMode?: boolean;
 }
 
 export function ChatInput({
@@ -24,6 +25,7 @@ export function ChatInput({
   disabled = false,
   isLoading = false,
   className,
+  darkMode = false,
 }: ChatInputProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -64,7 +66,7 @@ export function ChatInput({
   };
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-3', className)}>
       {/* Suggest button row */}
       <div className="flex justify-start">
         <Button
@@ -100,9 +102,10 @@ export function ChatInput({
             disabled={disabled || isLoading}
             className={cn(
               'min-h-[52px] max-h-[200px] resize-none pr-4',
-              'rounded-2xl border-2 border-gray-200 focus:border-blue-500',
-              'transition-colors duration-200',
-              'placeholder:text-gray-400 text-gray-900',
+              'rounded-xl transition-colors duration-200',
+              darkMode
+                ? 'bg-white/5 border-white/10 text-white placeholder:text-zinc-500 focus:border-violet-500/50 focus:ring-violet-500/20'
+                : 'border-2 border-gray-200 focus:border-blue-500 placeholder:text-gray-400 text-gray-900',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
             rows={1}
@@ -112,9 +115,9 @@ export function ChatInput({
           onClick={handleSubmit}
           disabled={!value.trim() || disabled || isLoading}
           className={cn(
-            'h-[52px] px-6 rounded-2xl',
-            'bg-gradient-to-r from-blue-600 to-indigo-600',
-            'hover:from-blue-700 hover:to-indigo-700',
+            'h-[52px] px-6 rounded-xl',
+            'bg-gradient-to-r from-violet-600 to-fuchsia-600',
+            'hover:from-violet-700 hover:to-fuchsia-700',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-all duration-200'
           )}

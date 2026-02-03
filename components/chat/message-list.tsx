@@ -2,7 +2,7 @@
 
 /**
  * MessageList - Displays conversation messages with role-based styling
- * Features: Auto-scroll, streaming support, typing indicator
+ * Features: Auto-scroll, streaming support, typing indicator, dark mode
  */
 
 import { useEffect, useRef } from 'react';
@@ -15,6 +15,7 @@ interface MessageListProps {
   streamingMessage?: string;
   isTyping?: boolean;
   className?: string;
+  darkMode?: boolean;
 }
 
 export function MessageList({
@@ -22,6 +23,7 @@ export function MessageList({
   streamingMessage,
   isTyping = false,
   className,
+  darkMode = false,
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -41,7 +43,7 @@ export function MessageList({
     >
       <AnimatePresence mode="popLayout">
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble key={message.id} message={message} darkMode={darkMode} />
         ))}
         
         {/* Streaming message */}
@@ -55,6 +57,7 @@ export function MessageList({
               timestamp: new Date().toISOString(),
             }}
             isStreaming
+            darkMode={darkMode}
           />
         )}
 
@@ -66,7 +69,7 @@ export function MessageList({
             exit={{ opacity: 0 }}
             className="flex items-center gap-2 px-4"
           >
-            <TypingIndicator />
+            <TypingIndicator darkMode={darkMode} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -79,9 +82,10 @@ export function MessageList({
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
+  darkMode?: boolean;
 }
 
-function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
+function MessageBubble({ message, isStreaming = false, darkMode = false }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
@@ -90,7 +94,10 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="text-center text-sm text-gray-500 py-2"
+        className={cn(
+          'text-center text-sm py-2',
+          darkMode ? 'text-zinc-500' : 'text-gray-500'
+        )}
       >
         {message.content}
       </motion.div>
@@ -111,7 +118,9 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-3',
           isUser
-            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+            : darkMode
+            ? 'bg-white/5 border border-white/10 text-zinc-100'
             : 'bg-gray-100 text-black',
           isStreaming && 'min-h-[60px]'
         )}
@@ -119,19 +128,24 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
         {/* Avatar for assistant */}
         {!isUser && (
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 flex items-center justify-center">
-              <span className="text-xs text-white font-bold">AI</span>
+            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-600 flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             </div>
-            <span className="text-xs font-medium text-gray-500">Assistant</span>
+            <span className={cn(
+              'text-xs font-medium',
+              darkMode ? 'text-zinc-400' : 'text-gray-500'
+            )}>Buildware AI</span>
           </div>
         )}
 
         {/* Message content */}
         <div className={cn(
           'text-sm leading-relaxed whitespace-pre-wrap break-words',
-          isUser ? 'text-white' : 'text-black'
+          isUser ? 'text-white' : darkMode ? 'text-zinc-100' : 'text-black'
         )}>
-          {message.content}
+          {formatMessageContent(message.content)}
           {isStreaming && (
             <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse rounded-sm" />
           )}
@@ -141,7 +155,7 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
         <div 
           className={cn(
             'text-xs mt-2',
-            isUser ? 'text-blue-100' : 'text-gray-400'
+            isUser ? 'text-violet-200' : darkMode ? 'text-zinc-500' : 'text-gray-400'
           )}
           suppressHydrationWarning
         >
@@ -152,12 +166,24 @@ function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
   );
 }
 
-function TypingIndicator() {
+function TypingIndicator({ darkMode = false }: { darkMode?: boolean }) {
   return (
-    <div className="flex gap-1 px-4 py-3 bg-gray-100 rounded-2xl w-fit">
-      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+    <div className={cn(
+      'flex gap-1 px-4 py-3 rounded-2xl w-fit',
+      darkMode ? 'bg-white/5 border border-white/10' : 'bg-gray-100'
+    )}>
+      <span className={cn(
+        'w-2 h-2 rounded-full animate-bounce',
+        darkMode ? 'bg-zinc-500' : 'bg-gray-400'
+      )} style={{ animationDelay: '0ms' }} />
+      <span className={cn(
+        'w-2 h-2 rounded-full animate-bounce',
+        darkMode ? 'bg-zinc-500' : 'bg-gray-400'
+      )} style={{ animationDelay: '150ms' }} />
+      <span className={cn(
+        'w-2 h-2 rounded-full animate-bounce',
+        darkMode ? 'bg-zinc-500' : 'bg-gray-400'
+      )} style={{ animationDelay: '300ms' }} />
     </div>
   );
 }
@@ -172,4 +198,21 @@ function formatTime(timestamp: string): string {
   } catch {
     return '';
   }
+}
+
+// Simple markdown-like formatting for bold text
+function formatMessageContent(content: string): React.ReactNode {
+  // Split by bold markers (**text**)
+  const parts = content.split(/(\*\*[^*]+\*\*)/g);
+  
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={index} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
 }

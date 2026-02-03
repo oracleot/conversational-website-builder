@@ -1,17 +1,16 @@
 'use client';
 
 /**
- * ChatInterface - Main chat UI component
- * Combines MessageList, ChatInput, and ProgressIndicator
- * Handles streaming responses and state management
+ * ChatInterface - Main chat UI component for section-focused building
+ * Dark theme matching the landing page aesthetic
  */
 
 import { useState, useCallback } from 'react';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
-import { CompactProgressIndicator } from './progress-indicator';
 import { cn } from '@/lib/utils';
 import type { Message, ConversationStep, IndustryType } from '@/lib/db/types';
+import type { OnboardingData } from '@/components/builder/onboarding-form';
 
 interface ChatInterfaceProps {
   conversationId: string;
@@ -21,51 +20,108 @@ interface ChatInterfaceProps {
   onStepChange?: (step: ConversationStep) => void;
   onExtraction?: (type: string, content: unknown) => void;
   className?: string;
+  businessInfo?: OnboardingData | null;
+  currentSectionTitle?: string;
 }
 
-// Initial welcome message based on current step
-const getInitialWelcomeMessage = (step: ConversationStep): Message => {
-  const welcomeMessages: Partial<Record<ConversationStep, string>> = {
-    industry_selection: `Welcome! I'm excited to help you build your professional website today. 🎉
+// Section-focused welcome message
+const getSectionWelcomeMessage = (
+  sectionTitle: string | undefined,
+  businessName: string | undefined
+): Message => {
+  const name = businessName || 'your business';
+  const section = sectionTitle || 'Hero Section';
+  
+  const sectionPrompts: Record<string, string> = {
+    'Hero Section': `Let's create an impactful hero section for ${name}! 🎯
 
-To get started, I need to understand your business better. What type of business are you building a website for?
-
-**1. Service Business** - Consulting, agencies, professional services, B2B
-**2. Local Business** - Restaurants, salons, retail shops, local services
-
-Just tell me about your business and I'll guide you through creating each section!
-
-💡 *Not sure what to say? Click the "Suggest an answer" button for ideas!*`,
-    business_profile: `Great! Now let's capture your business identity.
-
-I'll need a few key details:
-• **Business name** - What's your company called?
-• **Tagline** - A short, catchy phrase that captures what you do
-• **Description** - What does your business do and who do you serve?
-• **Brand personality** - 2-3 words that describe your brand (e.g., professional, friendly, modern)
-• **Contact email** - Where should customers reach you?
-
-Let's start with your business name!
-
-💡 *Stuck? Hit "Suggest an answer" for an example you can customize!*`,
-    hero: `Now let's create your hero section - this is the first thing visitors will see!
-
-I need:
+I'll need a few things from you:
 • **Headline** - Your main value proposition (what makes you special?)
 • **Subheadline** - A supporting message that expands on the headline
-• **Call-to-action** - What should visitors do? (e.g., "Get Started", "Book Consultation")
+• **Call-to-action** - What should visitors do? (e.g., "Get Started", "Book a Call")
 
-What's the main message you want visitors to see first?
+What's the main message you want visitors to see first?`,
+    
+    'Services': `Now let's showcase what ${name} offers! 💼
 
-💡 *Need inspiration? The "Suggest an answer" button can help!*`,
+Tell me about your services:
+• What are the main services or offerings?
+• What benefits do clients get from each?
+• Any pricing or packages you want to highlight?
+
+You can list them out or describe them in your own words.`,
+    
+    'Menu': `Time to show off the menu! 🍽️
+
+Share your menu items with me:
+• Popular dishes or items
+• Prices (if you want to show them)
+• Special categories or sections
+
+Just describe what you offer and I'll organize it beautifully.`,
+    
+    'About': `Let's tell the story of ${name}! 👋
+
+I'd love to hear:
+• How did ${name} get started?
+• What's your mission or vision?
+• What makes you different from competitors?
+• Any impressive stats (years in business, clients served, etc.)?`,
+    
+    'Process': `Let's show how you work with clients! 📋
+
+Walk me through your typical process:
+• What are the main steps?
+• How long does each step take?
+• What can clients expect at each stage?`,
+    
+    'Testimonials': `Social proof time! ⭐
+
+Share some testimonials:
+• What have clients said about working with ${name}?
+• Any specific results or outcomes you can quote?
+• Who are the clients (names, companies, or just titles)?`,
+    
+    'Portfolio': `Let's showcase your best work! 🎨
+
+Tell me about your favorite projects:
+• What was the project?
+• Who was the client?
+• What were the results?`,
+    
+    'Gallery': `Time for some visuals! 🖼️
+
+Describe the photos you'd like to showcase:
+• Photos of your space
+• Action shots of your work
+• Team photos
+• Before/after images`,
+    
+    'Location': `Let's help people find you! 📍
+
+Share your location details:
+• Address
+• Business hours
+• Parking info
+• Any landmarks to help people find you?`,
+    
+    'Contact': `Last but not least - let's make it easy to reach you! 📧
+
+I already have your email from earlier. Let me know:
+• Preferred contact method?
+• Any call-to-action message? (e.g., "Get a free quote")
+• Social media links to include?`,
   };
 
+  const content = sectionPrompts[section] || 
+    `Let's work on your ${section.toLowerCase()}. Tell me what you'd like to include!`;
+
   return {
-    id: 'welcome-message',
+    id: `welcome-${section.replace(/\s+/g, '-').toLowerCase()}`,
     role: 'assistant',
-    content: welcomeMessages[step] || `Let's work on your ${step.replace('_', ' ')} section. Tell me what you'd like to include!\n\n💡 *Need help? Click "Suggest an answer" for ideas!*`,
+    content,
     timestamp: new Date().toISOString(),
-    metadata: { step },
+    metadata: { step: section.replace(/\s+/g, '_').toLowerCase() as ConversationStep },
   };
 };
 
@@ -77,10 +133,12 @@ export function ChatInterface({
   onStepChange,
   onExtraction,
   className,
+  businessInfo,
+  currentSectionTitle,
 }: ChatInterfaceProps) {
   // Add welcome message if no messages exist
   const messagesWithWelcome = initialMessages.length === 0 
-    ? [getInitialWelcomeMessage(currentStep)]
+    ? [getSectionWelcomeMessage(currentSectionTitle, businessInfo?.businessName)]
     : initialMessages;
   const [messages, setMessages] = useState<Message[]>(messagesWithWelcome);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
@@ -158,7 +216,6 @@ export function ChatInterface({
             const data = line.slice(6);
             
             if (data === '[DONE]') {
-              // Streaming complete
               break;
             }
 
@@ -226,14 +283,23 @@ export function ChatInterface({
   }, [conversationId, currentStep, isLoading, onStepChange, handleExtraction]);
 
   return (
-    <div className={cn('flex flex-col h-full bg-white', className)}>
-      {/* Progress indicator */}
-      <div className="shrink-0 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-        <CompactProgressIndicator
-          currentStep={currentStep}
-          industry={industry}
-        />
-      </div>
+    <div className={cn('flex flex-col h-full bg-[#0a0a0f]', className)}>
+      {/* Section Header */}
+      {currentSectionTitle && (
+        <div className="shrink-0 px-4 py-3 border-b border-white/5 bg-[#0a0a0f]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/20 text-violet-400">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-medium text-white">Working on: {currentSectionTitle}</h2>
+              <p className="text-xs text-zinc-500">Answer the questions to complete this section</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <MessageList
@@ -241,14 +307,16 @@ export function ChatInterface({
         streamingMessage={streamingMessage}
         isTyping={isLoading && !streamingMessage}
         className="flex-1"
+        darkMode
       />
 
       {/* Input */}
-      <div className="shrink-0 px-4 py-4 border-t border-gray-100 bg-white">
+      <div className="shrink-0 px-4 py-4 border-t border-white/5 bg-[#0a0a0f]">
         <ChatInput
           onSend={sendMessage}
           isLoading={isLoading}
           placeholder={getPlaceholder(currentStep)}
+          darkMode
         />
       </div>
     </div>
